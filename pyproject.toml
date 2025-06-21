@@ -45,11 +45,11 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/user/fft"
-Repository = "https://github.com/user/fft.git"
-Issues = "https://github.com/user/fft/issues"
-Changelog = "https://github.com/user/fft/blob/main/CHANGELOG.md"
-Contributing = "https://github.com/user/fft/blob/main/CONTRIBUTING.md"
+Homepage = "https://github.com/bdperkin/fft"
+Repository = "https://github.com/bdperkin/fft.git"
+Issues = "https://github.com/bdperkin/fft/issues"
+Changelog = "https://github.com/bdperkin/fft/blob/main/CHANGELOG.md"
+Contributing = "https://github.com/bdperkin/fft/blob/main/CONTRIBUTING.md"
 
 [project.scripts]
 fft = "fft:main"
