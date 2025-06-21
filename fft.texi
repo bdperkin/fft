@@ -13,7 +13,7 @@
 @copying
 This manual is for FFT (File Type Tester), version @value{VERSION}.
 
-Copyright @copyright{} 2024 Brandon Perkins.
+Copyright @copyright{} 2025 Brandon Perkins.
 
 @quotation
 Permission is granted to copy, distribute and/or modify this document
@@ -717,7 +717,7 @@ FFT is distributed under the MIT License. This is a permissive license that allo
 @example
 MIT License
 
-Copyright (c) 2024 Brandon Perkins
+Copyright (c) 2025 Brandon Perkins
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

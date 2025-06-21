@@ -1,5 +1,5 @@
 # Makefile for FFT (File Type Tester)
-# Copyright (c) 2024 Brandon Perkins <bdperkin@gmail.com>
+# Copyright (c) 2025 Brandon Perkins <bdperkin@gmail.com>
 # SPDX-License-Identifier: MIT
 
 # Variables
