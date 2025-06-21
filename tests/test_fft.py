@@ -1674,3 +1674,391 @@ class TestIntegration:
             assert (
                 "Python script" in captured.out or "executable script" in captured.out
             )
+
+
+class TestNoDereferenceFunctionality:
+    """Test cases for the -h, --no-dereference functionality."""
+
+    def test_no_dereference_flag_in_help(self, capsys):
+        """Test that --no-dereference flag appears in help."""
+        import sys
+
+        with unittest.mock.patch.object(sys, "argv", ["fft.py", "--help"]):
+            with pytest.raises(SystemExit):
+                fft.main()
+
+        captured = capsys.readouterr()
+        assert "--no-dereference" in captured.out
+        assert "symlinks not to be followed" in captured.out
+
+    def test_file_type_tester_no_dereference_default(self):
+        """Test FileTypeTester default no_dereference behavior."""
+        # Default should be True (don't follow symlinks) when POSIXLY_CORRECT is not set
+        import os
+
+        # Save original environment
+        original_posixly_correct = os.environ.get("POSIXLY_CORRECT")
+
+        try:
+            # Remove POSIXLY_CORRECT if it exists
+            if "POSIXLY_CORRECT" in os.environ:
+                del os.environ["POSIXLY_CORRECT"]
+
+            tester = fft.FileTypeTester()
+            assert tester.no_dereference is True
+        finally:
+            # Restore original environment
+            if original_posixly_correct is not None:
+                os.environ["POSIXLY_CORRECT"] = original_posixly_correct
+
+    def test_file_type_tester_posixly_correct_set(self):
+        """Test FileTypeTester behavior when POSIXLY_CORRECT is set."""
+        import os
+
+        # Save original environment
+        original_posixly_correct = os.environ.get("POSIXLY_CORRECT")
+
+        try:
+            # Set POSIXLY_CORRECT
+            os.environ["POSIXLY_CORRECT"] = "1"
+
+            tester = fft.FileTypeTester()
+            assert tester.no_dereference is False
+        finally:
+            # Restore original environment
+            if original_posixly_correct is not None:
+                os.environ["POSIXLY_CORRECT"] = original_posixly_correct
+            elif "POSIXLY_CORRECT" in os.environ:
+                del os.environ["POSIXLY_CORRECT"]
+
+    def test_file_type_tester_explicit_no_dereference(self):
+        """Test FileTypeTester with explicit no_dereference parameter."""
+        tester_true = fft.FileTypeTester(no_dereference=True)
+        assert tester_true.no_dereference is True
+
+        tester_false = fft.FileTypeTester(no_dereference=False)
+        assert tester_false.no_dereference is False
+
+    def test_symlink_no_dereference_enabled(self):
+        """Test symlink handling with no_dereference=True."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target_file = os.path.join(tmpdir, "target.py")
+            link_file = os.path.join(tmpdir, "link.py")
+
+            # Create target file and symlink
+            with open(target_file, "w") as f:
+                f.write("print('hello')")
+            os.symlink(target_file, link_file)
+
+            tester = fft.FileTypeTester(no_dereference=True)
+            result = tester.filesystem_tests(link_file)
+            assert result == "symbolic link"
+
+    def test_symlink_no_dereference_disabled(self):
+        """Test symlink handling with no_dereference=False."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target_file = os.path.join(tmpdir, "target.py")
+            link_file = os.path.join(tmpdir, "link.py")
+
+            # Create target file and symlink
+            with open(target_file, "w") as f:
+                f.write("print('hello')")
+            os.symlink(target_file, link_file)
+
+            tester = fft.FileTypeTester(no_dereference=False)
+            result = tester.filesystem_tests(link_file)
+            # Should follow the symlink and detect the Python file
+            assert result == "Python script"
+
+    def test_no_dereference_command_line_short_flag(self, capsys):
+        """Test -h flag for no-dereference."""
+        import sys
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target_file = os.path.join(tmpdir, "target.txt")
+            link_file = os.path.join(tmpdir, "link.txt")
+
+            # Create target file and symlink
+            with open(target_file, "w") as f:
+                f.write("Hello world")
+            os.symlink(target_file, link_file)
+
+            with unittest.mock.patch.object(sys, "argv", ["fft.py", "-h", link_file]):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert "symbolic link" in captured.out
+            assert link_file in captured.out
+
+    def test_no_dereference_command_line_long_flag(self, capsys):
+        """Test --no-dereference flag."""
+        import sys
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target_file = os.path.join(tmpdir, "target.txt")
+            link_file = os.path.join(tmpdir, "link.txt")
+
+            # Create target file and symlink
+            with open(target_file, "w") as f:
+                f.write("Hello world")
+            os.symlink(target_file, link_file)
+
+            with unittest.mock.patch.object(
+                sys, "argv", ["fft.py", "--no-dereference", link_file]
+            ):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert "symbolic link" in captured.out
+            assert link_file in captured.out
+
+    def test_no_dereference_with_verbose_mode(self, capsys):
+        """Test no-dereference with verbose mode."""
+        import sys
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target_file = os.path.join(tmpdir, "target.py")
+            link_file = os.path.join(tmpdir, "link.py")
+
+            # Create target file and symlink
+            with open(target_file, "w") as f:
+                f.write("print('hello')")
+            os.symlink(target_file, link_file)
+
+            with unittest.mock.patch.object(
+                sys, "argv", ["fft.py", "-v", "-h", link_file]
+            ):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert "symbolic link [Filesystem test]" in captured.out
+
+    def test_no_dereference_with_brief_mode(self, capsys):
+        """Test no-dereference with brief mode."""
+        import sys
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target_file = os.path.join(tmpdir, "target.py")
+            link_file = os.path.join(tmpdir, "link.py")
+
+            # Create target file and symlink
+            with open(target_file, "w") as f:
+                f.write("print('hello')")
+            os.symlink(target_file, link_file)
+
+            with unittest.mock.patch.object(
+                sys, "argv", ["fft.py", "-b", "-h", link_file]
+            ):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert "symbolic link" in captured.out
+            assert link_file not in captured.out  # Brief mode doesn't show filenames
+
+    def test_no_dereference_with_extension_mode(self, capsys):
+        """Test no-dereference with extension mode."""
+        import sys
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target_file = os.path.join(tmpdir, "target.txt")
+            link_file = os.path.join(tmpdir, "symlink")
+
+            # Create target file and symlink
+            with open(target_file, "w") as f:
+                f.write("Hello world")
+            os.symlink(target_file, link_file)
+
+            with unittest.mock.patch.object(
+                sys, "argv", ["fft.py", "--extension", "-h", link_file]
+            ):
+                fft.main()
+
+            captured = capsys.readouterr()
+            # Symbolic links don't have extensions in our mapping
+            # Should show empty extensions for symbolic link
+            expected_output = f"{link_file}: "
+            assert expected_output in captured.out
+            lines = captured.out.strip().split("\n")
+            assert len(lines) == 1
+            assert (
+                lines[0] == expected_output.rstrip()
+            )  # Remove trailing space for comparison
+
+    def test_no_dereference_with_custom_separator(self, capsys):
+        """Test no-dereference with custom separator."""
+        import sys
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target_file = os.path.join(tmpdir, "target.py")
+            link_file = os.path.join(tmpdir, "link.py")
+
+            # Create target file and symlink
+            with open(target_file, "w") as f:
+                f.write("print('hello')")
+            os.symlink(target_file, link_file)
+
+            with unittest.mock.patch.object(
+                sys, "argv", ["fft.py", "-F", " -> ", "-h", link_file]
+            ):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert f"{link_file} ->  symbolic link" in captured.out
+
+    def test_no_dereference_with_debug_mode(self, capsys):
+        """Test no-dereference with debug mode."""
+        import sys
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target_file = os.path.join(tmpdir, "target.py")
+            link_file = os.path.join(tmpdir, "link.py")
+
+            # Create target file and symlink
+            with open(target_file, "w") as f:
+                f.write("print('hello')")
+            os.symlink(target_file, link_file)
+
+            with unittest.mock.patch.object(
+                sys, "argv", ["fft.py", "-d", "-h", link_file]
+            ):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert "symbolic link" in captured.out
+            assert "Not dereferencing symlink" in captured.err
+            assert "no_dereference=True" in captured.err
+
+    def test_no_dereference_multiple_symlinks(self, capsys):
+        """Test no-dereference with multiple symbolic links."""
+        import sys
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target1 = os.path.join(tmpdir, "target1.py")
+            target2 = os.path.join(tmpdir, "target2.js")
+            link1 = os.path.join(tmpdir, "link1.py")
+            link2 = os.path.join(tmpdir, "link2.js")
+
+            # Create target files and symlinks
+            with open(target1, "w") as f:
+                f.write("print('hello')")
+            with open(target2, "w") as f:
+                f.write("console.log('hello');")
+            os.symlink(target1, link1)
+            os.symlink(target2, link2)
+
+            with unittest.mock.patch.object(
+                sys, "argv", ["fft.py", "-h", link1, link2]
+            ):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert f"{link1}: symbolic link" in captured.out
+            assert f"{link2}: symbolic link" in captured.out
+
+    def test_no_dereference_mixed_files_and_symlinks(self, capsys):
+        """Test no-dereference with mix of regular files and symlinks."""
+        import sys
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            regular_file = os.path.join(tmpdir, "regular.py")
+            target_file = os.path.join(tmpdir, "target.js")
+            link_file = os.path.join(tmpdir, "link.js")
+
+            # Create files and symlink
+            with open(regular_file, "w") as f:
+                f.write("print('hello')")
+            with open(target_file, "w") as f:
+                f.write("console.log('hello');")
+            os.symlink(target_file, link_file)
+
+            with unittest.mock.patch.object(
+                sys, "argv", ["fft.py", "-h", regular_file, link_file]
+            ):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert f"{regular_file}: Python script" in captured.out
+            assert f"{link_file}: symbolic link" in captured.out
+
+    def test_no_dereference_environment_variable_override(self, capsys):
+        """Test that command line -h overrides POSIXLY_CORRECT."""
+        import os
+        import sys
+        import tempfile
+
+        # Save original environment
+        original_posixly_correct = os.environ.get("POSIXLY_CORRECT")
+
+        try:
+            # Set POSIXLY_CORRECT (which would normally enable dereferencing)
+            os.environ["POSIXLY_CORRECT"] = "1"
+
+            with tempfile.TemporaryDirectory() as tmpdir:
+                target_file = os.path.join(tmpdir, "target.py")
+                link_file = os.path.join(tmpdir, "link.py")
+
+                # Create target file and symlink
+                with open(target_file, "w") as f:
+                    f.write("print('hello')")
+                os.symlink(target_file, link_file)
+
+                # Use -h flag to force no-dereference despite POSIXLY_CORRECT
+                with unittest.mock.patch.object(
+                    sys, "argv", ["fft.py", "-h", link_file]
+                ):
+                    fft.main()
+
+                captured = capsys.readouterr()
+                assert "symbolic link" in captured.out
+                # Should not show Python script since we're not dereferencing
+
+        finally:
+            # Restore original environment
+            if original_posixly_correct is not None:
+                os.environ["POSIXLY_CORRECT"] = original_posixly_correct
+
+    def test_symlink_to_directory_no_dereference(self, capsys):
+        """Test symlink to directory with no-dereference."""
+        import sys
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            target_dir = os.path.join(tmpdir, "target_dir")
+            link_dir = os.path.join(tmpdir, "link_dir")
+
+            # Create target directory and symlink
+            os.makedirs(target_dir)
+            os.symlink(target_dir, link_dir)
+
+            with unittest.mock.patch.object(sys, "argv", ["fft.py", "-h", link_dir]):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert f"{link_dir}: symbolic link" in captured.out
+
+    def test_broken_symlink_no_dereference(self, capsys):
+        """Test broken symlink with no-dereference."""
+        import sys
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            nonexistent_target = os.path.join(tmpdir, "nonexistent")
+            link_file = os.path.join(tmpdir, "broken_link")
+
+            # Create symlink to nonexistent file
+            os.symlink(nonexistent_target, link_file)
+
+            with unittest.mock.patch.object(sys, "argv", ["fft.py", "-h", link_file]):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert f"{link_file}: symbolic link" in captured.out

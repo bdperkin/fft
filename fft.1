@@ -42,10 +42,13 @@ Use the specified string as the separator between the filename and the file resu
 .BR \-f ", " \-\-files\-from " namefile"
 Read the names of the files to be examined from namefile (one per line) before the argument list. Either namefile or at least one filename argument must be present; to test the standard input, use '\-' as a filename argument. Please note that namefile is unwrapped and the enclosed filenames are processed when this option is encountered and before any further options processing is done. This allows one to process multiple lists of files with different command line arguments on the same fft invocation. Thus if you want to set the delimiter, you need to do it before you specify the list of files, like: "\-F @ \-f namefile", instead of: "\-f namefile \-F @".
 .TP
+.BR \-h ", " \-\-no\-dereference
+This option causes symlinks not to be followed (on systems that support symbolic links). This is the default if the environment variable POSIXLY_CORRECT is not defined. When this option is enabled, symbolic links are detected and reported as "symbolic link" rather than analyzing the target file. When disabled (dereferencing enabled), symbolic links are followed and the target file is analyzed instead.
+.TP
 .BR \-\-version
 Show version information and exit.
 .TP
-.BR \-h ", " \-\-help
+.BR \-\-help
 Display help message and exit.
 .SH TEST CATEGORIES
 .SS Filesystem Tests
@@ -226,6 +229,22 @@ README.md =>  Markdown document [Language test]
 .TP
 Read filenames from a file:
 .B echo -e "script.py\\nimage.jpg\\ndocument.pdf" > filelist.txt && fft \-f filelist.txt
+.TP
+Handle symbolic links with no-dereference (default behavior):
+.B ln -s /etc/passwd mylink && fft -h mylink
+.PP
+Output:
+.nf
+mylink: symbolic link
+.fi
+.TP
+Follow symbolic links by disabling no-dereference:
+.B POSIXLY_CORRECT=1 fft mylink
+.PP
+Output:
+.nf
+mylink: ASCII text
+.fi
 .PP
 Output:
 .nf

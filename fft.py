@@ -23,8 +23,16 @@ import magic
 
 
 class FileTypeTester:
-    def __init__(self, debug=False):
+    def __init__(self, debug=False, no_dereference=None):
         self.debug = debug
+
+        # Handle no_dereference default based on POSIXLY_CORRECT environment variable
+        if no_dereference is None:
+            # Default is to NOT follow symlinks if POSIXLY_CORRECT is not defined
+            self.no_dereference = os.environ.get("POSIXLY_CORRECT") is None
+        else:
+            self.no_dereference = no_dereference
+
         self.mime_detector = magic.Magic(magic.MAGIC_MIME_TYPE)
         self.description_detector = magic.Magic(magic.MAGIC_NONE)
 
@@ -91,15 +99,28 @@ class FileTypeTester:
         self.debug_print(f"Running filesystem tests on '{filepath}'")
         path = Path(filepath)
 
+        # Check if it's a symbolic link first
+        if path.is_symlink():
+            self.debug_print(f"'{filepath}' is a symbolic link")
+            if self.no_dereference:
+                # Don't follow symlinks - return "symbolic link"
+                self.debug_print(
+                    f"Not dereferencing symlink '{filepath}' "
+                    f"(no_dereference={self.no_dereference})"
+                )
+                return "symbolic link"
+            else:
+                # Follow symlinks - continue with analysis of the target
+                self.debug_print(
+                    f"Dereferencing symlink '{filepath}' "
+                    f"(no_dereference={self.no_dereference})"
+                )
+                # Continue with normal analysis - the path methods will follow the link
+
         # Check if it's a directory
         if path.is_dir():
             self.debug_print(f"'{filepath}' is a directory")
             return "directory"
-
-        # Check if it's a symbolic link
-        if path.is_symlink():
-            self.debug_print(f"'{filepath}' is a symbolic link")
-            return "symbolic link"
 
         # Check if it's a block or character device
         if path.is_block_device():
@@ -178,7 +199,7 @@ class FileTypeTester:
             self.debug_print(f"Magic test failed for '{filepath}': {e}")
             # Fallback to Python's mimetypes module
             mime_type, _ = mimetypes.guess_type(filepath)
-            if mime_type:
+            if mime_type is not None:
                 result = f"file of type {mime_type}"
                 self.debug_print(
                     f"Fallback mimetypes result for '{filepath}': {result}"
@@ -262,7 +283,11 @@ class FileTypeTester:
         """
         self.debug_print(f"Starting file type detection for '{filepath}'")
 
-        if not os.path.exists(filepath):
+        # Check existence, but allow broken symlinks if no_dereference is True
+        path = Path(filepath)
+        if not os.path.exists(filepath) and not (
+            self.no_dereference and path.is_symlink()
+        ):
             error_msg = f"ERROR: File '{filepath}' does not exist"
             self.debug_print(error_msg)
             return error_msg, None
@@ -369,11 +394,12 @@ def main():
     exit_on_error = False
     extension = False
     separator = ":"
+    no_dereference = None  # Will be set based on POSIXLY_CORRECT if not specified
     remaining_files = []
     any_files_processed = False
 
     # Initialize the tester early so it can be used in file processing
-    tester = FileTypeTester(debug=debug)
+    tester = FileTypeTester(debug=debug, no_dereference=no_dereference)
 
     def process_files_with_current_settings(files_to_process):
         """Process files immediately with current settings"""
@@ -383,8 +409,8 @@ def main():
             any_files_processed = True
             path = Path(filepath)
 
-            # Check if the path exists at all
-            if not path.exists():
+            # Check if the path exists at all (but handle symlinks specially)
+            if not path.exists() and not path.is_symlink():
                 error_msg = f"ERROR: File or directory '{filepath}' does not exist"
                 if exit_on_error:
                     print(error_msg, file=sys.stderr)
@@ -393,7 +419,8 @@ def main():
                     print(f"{filepath}{separator} {error_msg}")
                     continue
 
-            if path.is_dir():
+            # Check if it's a directory, but handle symlinks specially
+            if path.is_dir() and not (path.is_symlink() and tester.no_dereference):
                 if debug:
                     print(
                         f"DEBUG: '{filepath}' is a directory, processing recursively",
@@ -496,13 +523,14 @@ def main():
     while i < len(argv):
         arg = argv[i]
 
-        if arg in ["-h", "--help"]:
+        if arg == "--help":
             # Show help and exit
             parser = argparse.ArgumentParser(
                 description=(
                     "FFT - File Type Tester: Determine file types using filesystem, "
                     "magic, and language tests"
-                )
+                ),
+                add_help=False,  # Disable automatic help to use -h for no-dereference
             )
             parser.add_argument(
                 "files", nargs="*", help="Files or directories to analyze"
@@ -567,10 +595,26 @@ def main():
                 ),
             )
             parser.add_argument(
+                "-h",
+                "--no-dereference",
+                action="store_true",
+                help=(
+                    "This option causes symlinks not to be followed "
+                    "(on systems that support symbolic links). "
+                    "This is the default if the environment variable "
+                    "POSIXLY_CORRECT is not defined."
+                ),
+            )
+            parser.add_argument(
                 "--version",
                 action="version",
                 version=f"%(prog)s {__version__}",
                 help="Show version information",
+            )
+            parser.add_argument(
+                "--help",
+                action="help",
+                help="Show this help message and exit",
             )
             parser.print_help()
             sys.exit(0)
@@ -586,9 +630,13 @@ def main():
         elif arg in ["-d", "--debug"]:
             debug = True
             # Update tester debug setting
-            tester = FileTypeTester(debug=debug)
+            tester = FileTypeTester(debug=debug, no_dereference=no_dereference)
         elif arg in ["-E", "--exit-on-error"]:
             exit_on_error = True
+        elif arg in ["-h", "--no-dereference"]:
+            no_dereference = True
+            # Update tester no_dereference setting
+            tester = FileTypeTester(debug=debug, no_dereference=no_dereference)
         elif arg == "--extension":
             extension = True
         elif arg in ["-F", "--separator"]:
