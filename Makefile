@@ -76,7 +76,10 @@ coverage:
 
 # Build and package
 build:
+	@echo "Building distribution packages..."
 	$(PYTHON) -m build
+	@echo "Build complete. Files created in dist/:"
+	@ls -la dist/
 
 install:
 	$(PIP) install -e .
