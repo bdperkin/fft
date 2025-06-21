@@ -36,6 +36,12 @@ Exit immediately on filesystem errors instead of continuing. When this option is
 .BR \-\-extension
 Print a slash-separated list of valid extensions for the file type found. Instead of showing the file type name, this option displays the known file extensions associated with the detected file type. For file types with multiple extensions (like JPEG), all extensions are shown separated by forward slashes.
 .TP
+.BR \-F ", " \-\-separator " separator"
+Use the specified string as the separator between the filename and the file result returned. The default separator is ':'. This option allows customization of the output format for easier parsing or different visual presentation. Note that in brief mode (-b), no separator is used as filenames are not displayed.
+.TP
+.BR \-f ", " \-\-files\-from " namefile"
+Read the names of the files to be examined from namefile (one per line) before the argument list. Either namefile or at least one filename argument must be present; to test the standard input, use '\-' as a filename argument. Please note that namefile is unwrapped and the enclosed filenames are processed when this option is encountered and before any further options processing is done. This allows one to process multiple lists of files with different command line arguments on the same fft invocation. Thus if you want to set the delimiter, you need to do it before you specify the list of files, like: "\-F @ \-f namefile", instead of: "\-f namefile \-F @".
+.TP
 .BR \-\-version
 Show version information and exit.
 .TP
@@ -188,6 +194,75 @@ py
 jpeg/jpg
 html
 .fi
+.TP
+Custom separator for different output format:
+.B fft \-F " | "
+script.py document.pdf
+.PP
+Output:
+.nf
+script.py |  Python script
+document.pdf |  PDF document
+.fi
+.TP
+Using separator for easier parsing:
+.B fft \-F "\\t"
+*.py
+.PP
+Output (tab-separated):
+.nf
+script1.py	Python script
+script2.py	Python script
+.fi
+.TP
+Separator with verbose mode:
+.B fft \-v \-F " => "
+README.md
+.PP
+Output:
+.nf
+README.md =>  Markdown document [Language test]
+.fi
+.TP
+Read filenames from a file:
+.B echo -e "script.py\\nimage.jpg\\ndocument.pdf" > filelist.txt && fft \-f filelist.txt
+.PP
+Output:
+.nf
+script.py: Python script
+image.jpg: JPEG image
+document.pdf: PDF document
+.fi
+.TP
+Combine files-from with command line arguments:
+.B fft \-f filelist.txt extra_file.js
+.PP
+Output:
+.nf
+script.py: Python script
+image.jpg: JPEG image
+document.pdf: PDF document
+extra_file.js: JavaScript file
+.fi
+.TP
+Multiple namefiles processed in order:
+.B fft \-f list1.txt \-f list2.txt
+.PP
+Files from list1.txt are processed first, then files from list2.txt.
+.TP
+Order-dependent separator usage:
+.B fft \-F " | " \-f filelist.txt
+.PP
+Files from the namefile use the custom separator (" | ").
+.PP
+.B fft \-f filelist.txt \-F " | "
+.PP
+Files from the namefile use the default separator (":"), as the separator change comes after the files-from processing.
+.TP
+Read filenames from standard input:
+.B find /path/to/files -name "*.py" | fft \-f -
+.PP
+Processes all Python files found by the find command.
 .SH SUPPORTED FILE TYPES
 .SS Extensions (Filesystem Tests)
 Text files: .txt, .md, .csv

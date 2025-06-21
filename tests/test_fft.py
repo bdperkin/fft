@@ -635,7 +635,7 @@ class TestDebugFunctionality:
             captured = capsys.readouterr()
 
             # Check that debug output is present in stderr
-            assert "DEBUG: Processing 1 argument(s)" in captured.err
+            assert "DEBUG: Processing 1 remaining command line files" in captured.err
             assert "DEBUG: Starting file type detection" in captured.err
             assert "DEBUG: Running filesystem tests" in captured.err
 
@@ -739,7 +739,7 @@ class TestDebugFunctionality:
             captured = capsys.readouterr()
 
             # Check directory processing debug output
-            assert "DEBUG: Processing 1 argument(s)" in captured.err
+            assert "DEBUG: Processing 1 remaining command line files" in captured.err
             assert "is a directory, processing recursively" in captured.err
             assert "DEBUG: Scanning directory" in captured.err
             assert "DEBUG: Found" in captured.err and "files in" in captured.err
@@ -1126,6 +1126,513 @@ class TestExtensionFunctionality:
             captured = capsys.readouterr()
             assert f"{js_file}: js" in captured.out
             assert f"{py_file}: py" in captured.out
+
+
+class TestSeparatorFunctionality:
+    """Test cases for the -F/--separator functionality."""
+
+    def test_separator_flag_in_help(self, capsys):
+        """Test that -F/--separator option appears in help text."""
+        with pytest.raises(SystemExit):
+            with unittest.mock.patch("sys.argv", ["fft.py", "--help"]):
+                fft.main()
+
+        captured = capsys.readouterr()
+        assert "-F, --separator" in captured.out
+        assert "Use the specified string as the separator" in captured.out
+        assert "default: ':'" in captured.out
+
+    def test_default_separator_colon(self, capsys):
+        """Test that the default separator is a colon."""
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as f:
+            f.write("print('hello')")
+            f.flush()
+
+            with unittest.mock.patch("sys.argv", ["fft.py", f.name]):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert f"{f.name}: Python script" in captured.out
+
+            os.unlink(f.name)
+
+    def test_custom_separator_short_flag(self, capsys):
+        """Test custom separator using -F short flag."""
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as f:
+            f.write("print('hello')")
+            f.flush()
+
+            with unittest.mock.patch("sys.argv", ["fft.py", "-F", " | ", f.name]):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert f"{f.name} |  Python script" in captured.out
+
+            os.unlink(f.name)
+
+    def test_custom_separator_long_flag(self, capsys):
+        """Test custom separator using --separator long flag."""
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".js") as f:
+            f.write("console.log('hello');")
+            f.flush()
+
+            with unittest.mock.patch(
+                "sys.argv", ["fft.py", "--separator", " => ", f.name]
+            ):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert f"{f.name} =>  JavaScript file" in captured.out
+
+            os.unlink(f.name)
+
+    def test_separator_with_verbose_mode(self, capsys):
+        """Test custom separator with verbose mode."""
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".html") as f:
+            f.write("<html></html>")
+            f.flush()
+
+            with unittest.mock.patch(
+                "sys.argv", ["fft.py", "-v", "-F", " -> ", f.name]
+            ):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert f"{f.name} ->  HTML document [Filesystem test]" in captured.out
+
+            os.unlink(f.name)
+
+    def test_separator_with_extension_mode(self, capsys):
+        """Test custom separator with extension mode."""
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json") as f:
+            f.write('{"test": "data"}')
+            f.flush()
+
+            with unittest.mock.patch(
+                "sys.argv", ["fft.py", "--extension", "-F", " has ext: ", f.name]
+            ):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert f"{f.name} has ext:  json" in captured.out
+
+            os.unlink(f.name)
+
+    def test_separator_with_brief_mode(self, capsys):
+        """Test that separator is ignored in brief mode."""
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as f:
+            f.write("hello world")
+            f.flush()
+
+            with unittest.mock.patch("sys.argv", ["fft.py", "-b", "-F", " | ", f.name]):
+                fft.main()
+
+            captured = capsys.readouterr()
+            # Brief mode should not show filename or separator
+            assert f.name not in captured.out
+            assert " | " not in captured.out
+            assert "text file" in captured.out
+
+            os.unlink(f.name)
+
+    def test_separator_with_error_messages(self, capsys):
+        """Test custom separator with error messages."""
+        nonexistent_file = "/nonexistent/test.file"
+
+        with unittest.mock.patch(
+            "sys.argv", ["fft.py", "-F", " >>> ", nonexistent_file]
+        ):
+            fft.main()
+
+        captured = capsys.readouterr()
+        assert f"{nonexistent_file} >>>  ERROR:" in captured.out
+
+    def test_separator_with_multiple_files(self, capsys):
+        """Test custom separator with multiple files."""
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as f1:
+            with tempfile.NamedTemporaryFile(
+                mode="w", delete=False, suffix=".css"
+            ) as f2:
+                f1.write("print('hello')")
+                f2.write("body { color: red; }")
+                f1.flush()
+                f2.flush()
+
+                with unittest.mock.patch(
+                    "sys.argv", ["fft.py", "-F", " :: ", f1.name, f2.name]
+                ):
+                    fft.main()
+
+                captured = capsys.readouterr()
+                assert f"{f1.name} ::  Python script" in captured.out
+                assert f"{f2.name} ::  CSS stylesheet" in captured.out
+
+                os.unlink(f1.name)
+                os.unlink(f2.name)
+
+    def test_separator_with_directory_processing(self, capsys):
+        """Test custom separator with directory processing."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create files with known extensions
+            py_file = os.path.join(tmpdir, "test.py")
+            js_file = os.path.join(tmpdir, "test.js")
+
+            with open(py_file, "w") as f:
+                f.write("print('hello')")
+            with open(js_file, "w") as f:
+                f.write("console.log('hello');")
+
+            with unittest.mock.patch("sys.argv", ["fft.py", "-F", " ~> ", tmpdir]):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert f"{js_file} ~>  JavaScript file" in captured.out
+            assert f"{py_file} ~>  Python script" in captured.out
+
+    def test_separator_empty_string(self, capsys):
+        """Test using empty string as separator."""
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".md") as f:
+            f.write("# Test Header")
+            f.flush()
+
+            with unittest.mock.patch("sys.argv", ["fft.py", "-F", "", f.name]):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert f"{f.name} Markdown document" in captured.out
+
+            os.unlink(f.name)
+
+    def test_separator_special_characters(self, capsys):
+        """Test separator with special characters."""
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".xml") as f:
+            f.write("<?xml version='1.0'?><root></root>")
+            f.flush()
+
+            with unittest.mock.patch("sys.argv", ["fft.py", "-F", " <==> ", f.name]):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert f"{f.name} <==>  XML document" in captured.out
+
+            os.unlink(f.name)
+
+
+class TestFilesFromFunctionality:
+    """Test cases for files-from functionality."""
+
+    def test_files_from_flag_in_help(self, capsys):
+        """Test that files-from option appears in help."""
+        import sys
+
+        # Mock sys.argv to simulate --help
+        with unittest.mock.patch.object(sys, "argv", ["fft.py", "--help"]):
+            with pytest.raises(SystemExit):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert "-f, --files-from" in captured.out
+            assert "namefile (one per line)" in captured.out
+
+    def test_files_from_basic_functionality(self, capsys):
+        """Test basic files-from functionality."""
+        import sys
+        import tempfile
+
+        # Create test files
+        with tempfile.NamedTemporaryFile(
+            mode="w", delete=False, suffix=".py"
+        ) as py_file:
+            py_file.write("print('hello')")
+            py_file.flush()
+
+            with tempfile.NamedTemporaryFile(
+                mode="w", delete=False, suffix=".js"
+            ) as js_file:
+                js_file.write("console.log('hello')")
+                js_file.flush()
+
+                # Create namefile
+                with tempfile.NamedTemporaryFile(mode="w", delete=False) as namefile:
+                    namefile.write(f"{py_file.name}\n{js_file.name}\n")
+                    namefile.flush()
+
+                    # Test files-from functionality
+                    with unittest.mock.patch.object(
+                        sys, "argv", ["fft.py", "-f", namefile.name]
+                    ):
+                        fft.main()
+
+                    captured = capsys.readouterr()
+                    assert "Python script" in captured.out
+                    assert "JavaScript" in captured.out
+
+                    os.unlink(namefile.name)
+                os.unlink(js_file.name)
+            os.unlink(py_file.name)
+
+    def test_files_from_with_command_line_args(self, capsys):
+        """Test files-from combined with command line arguments."""
+        import sys
+        import tempfile
+
+        # Create test files
+        with tempfile.NamedTemporaryFile(
+            mode="w", delete=False, suffix=".py"
+        ) as py_file:
+            py_file.write("print('hello')")
+            py_file.flush()
+
+            with tempfile.NamedTemporaryFile(
+                mode="w", delete=False, suffix=".js"
+            ) as js_file:
+                js_file.write("console.log('hello')")
+                js_file.flush()
+
+                with tempfile.NamedTemporaryFile(
+                    mode="w", delete=False, suffix=".html"
+                ) as html_file:
+                    html_file.write("<html></html>")
+                    html_file.flush()
+
+                    # Create namefile
+                    with tempfile.NamedTemporaryFile(
+                        mode="w", delete=False
+                    ) as namefile:
+                        namefile.write(f"{py_file.name}\n")
+                        namefile.flush()
+
+                        # Test files-from with additional command line files
+                        with unittest.mock.patch.object(
+                            sys,
+                            "argv",
+                            [
+                                "fft.py",
+                                "-f",
+                                namefile.name,
+                                js_file.name,
+                                html_file.name,
+                            ],
+                        ):
+                            fft.main()
+
+                        captured = capsys.readouterr()
+                        assert "Python script" in captured.out
+                        assert "JavaScript" in captured.out
+                        assert "HTML" in captured.out
+
+                        os.unlink(namefile.name)
+                    os.unlink(html_file.name)
+                os.unlink(js_file.name)
+            os.unlink(py_file.name)
+
+    def test_files_from_multiple_namefiles(self, capsys):
+        """Test multiple files-from options."""
+        import sys
+        import tempfile
+
+        # Create test files
+        with tempfile.NamedTemporaryFile(
+            mode="w", delete=False, suffix=".py"
+        ) as py_file:
+            py_file.write("print('hello')")
+            py_file.flush()
+
+            with tempfile.NamedTemporaryFile(
+                mode="w", delete=False, suffix=".js"
+            ) as js_file:
+                js_file.write("console.log('hello')")
+                js_file.flush()
+
+                # Create namefiles
+                with tempfile.NamedTemporaryFile(mode="w", delete=False) as namefile1:
+                    namefile1.write(f"{py_file.name}\n")
+                    namefile1.flush()
+
+                    with tempfile.NamedTemporaryFile(
+                        mode="w", delete=False
+                    ) as namefile2:
+                        namefile2.write(f"{js_file.name}\n")
+                        namefile2.flush()
+
+                        # Test multiple files-from options
+                        with unittest.mock.patch.object(
+                            sys,
+                            "argv",
+                            ["fft.py", "-f", namefile1.name, "-f", namefile2.name],
+                        ):
+                            fft.main()
+
+                        captured = capsys.readouterr()
+                        assert "Python script" in captured.out
+                        assert "JavaScript" in captured.out
+
+                        os.unlink(namefile2.name)
+                    os.unlink(namefile1.name)
+                os.unlink(js_file.name)
+            os.unlink(py_file.name)
+
+    def test_files_from_order_dependency_separator(self, capsys):
+        """Test that separator order matters with files-from."""
+        import sys
+        import tempfile
+
+        # Create test file
+        with tempfile.NamedTemporaryFile(
+            mode="w", delete=False, suffix=".py"
+        ) as py_file:
+            py_file.write("print('hello')")
+            py_file.flush()
+
+            # Create namefile
+            with tempfile.NamedTemporaryFile(mode="w", delete=False) as namefile:
+                namefile.write(f"{py_file.name}\n")
+                namefile.flush()
+
+                # Test separator before files-from
+                with unittest.mock.patch.object(
+                    sys, "argv", ["fft.py", "-F", " | ", "-f", namefile.name]
+                ):
+                    fft.main()
+
+                captured1 = capsys.readouterr()
+                assert " | " in captured1.out
+                assert "Python script" in captured1.out
+
+                # Test files-from before separator
+                with unittest.mock.patch.object(
+                    sys, "argv", ["fft.py", "-f", namefile.name, "-F", " | "]
+                ):
+                    fft.main()
+
+                captured2 = capsys.readouterr()
+                assert (
+                    ": " in captured2.out
+                )  # Should use default separator for namefile
+                assert "Python script" in captured2.out
+
+                os.unlink(namefile.name)
+            os.unlink(py_file.name)
+
+    def test_files_from_empty_lines_handling(self, capsys):
+        """Test that empty lines in namefiles are properly handled."""
+        import sys
+        import tempfile
+
+        # Create test file
+        with tempfile.NamedTemporaryFile(
+            mode="w", delete=False, suffix=".py"
+        ) as py_file:
+            py_file.write("print('hello')")
+            py_file.flush()
+
+            # Create namefile with empty lines
+            with tempfile.NamedTemporaryFile(mode="w", delete=False) as namefile:
+                namefile.write(f"{py_file.name}\n\n\n{py_file.name}\n")
+                namefile.flush()
+
+                # Test files-from with empty lines
+                with unittest.mock.patch.object(
+                    sys, "argv", ["fft.py", "-f", namefile.name]
+                ):
+                    fft.main()
+
+                captured = capsys.readouterr()
+                # Should process the file twice (once for each non-empty line)
+                assert captured.out.count("Python script") == 2
+
+                os.unlink(namefile.name)
+            os.unlink(py_file.name)
+
+    def test_files_from_nonexistent_namefile(self, capsys):
+        """Test error handling for nonexistent namefile."""
+        import sys
+
+        with unittest.mock.patch.object(
+            sys, "argv", ["fft.py", "-f", "/nonexistent/namefile.txt"]
+        ):
+            with pytest.raises(SystemExit) as exc_info:
+                fft.main()
+            assert exc_info.value.code == 2
+
+        captured = capsys.readouterr()
+        assert "ERROR: Cannot read namefile" in captured.out
+
+    def test_files_from_exit_on_error(self, capsys):
+        """Test files-from with exit-on-error flag."""
+        import sys
+
+        with unittest.mock.patch.object(
+            sys, "argv", ["fft.py", "-E", "-f", "/nonexistent/namefile.txt"]
+        ):
+            with pytest.raises(SystemExit) as exc_info:
+                fft.main()
+            assert exc_info.value.code == 1
+
+        captured = capsys.readouterr()
+        assert "ERROR: Cannot read namefile" in captured.err
+
+    def test_files_from_with_other_flags(self, capsys):
+        """Test files-from with verbose, brief, and extension flags."""
+        import sys
+        import tempfile
+
+        # Create test file
+        with tempfile.NamedTemporaryFile(
+            mode="w", delete=False, suffix=".py"
+        ) as py_file:
+            py_file.write("print('hello')")
+            py_file.flush()
+
+            # Create namefile
+            with tempfile.NamedTemporaryFile(mode="w", delete=False) as namefile:
+                namefile.write(f"{py_file.name}\n")
+                namefile.flush()
+
+                # Test with verbose
+                with unittest.mock.patch.object(
+                    sys, "argv", ["fft.py", "-v", "-f", namefile.name]
+                ):
+                    fft.main()
+                captured = capsys.readouterr()
+                assert "[Filesystem test]" in captured.out
+
+                # Test with brief
+                with unittest.mock.patch.object(
+                    sys, "argv", ["fft.py", "-b", "-f", namefile.name]
+                ):
+                    fft.main()
+                captured = capsys.readouterr()
+                assert (
+                    py_file.name not in captured.out
+                )  # Brief mode doesn't show filenames
+                assert "Python script" in captured.out
+
+                # Test with extension
+                with unittest.mock.patch.object(
+                    sys, "argv", ["fft.py", "--extension", "-f", namefile.name]
+                ):
+                    fft.main()
+                captured = capsys.readouterr()
+                assert "py" in captured.out
+
+                os.unlink(namefile.name)
+            os.unlink(py_file.name)
+
+    def test_files_from_no_files_error(self, capsys):
+        """Test error when no files are provided."""
+        import sys
+
+        with unittest.mock.patch.object(sys, "argv", ["fft.py"]):
+            with pytest.raises(SystemExit) as exc_info:
+                fft.main()
+            assert exc_info.value.code == 2
+
+        captured = capsys.readouterr()
+        assert (
+            "Either namefile or at least one filename argument must be present"
+            in captured.err
+        )
 
 
 @pytest.mark.integration
