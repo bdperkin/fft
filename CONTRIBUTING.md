@@ -195,6 +195,7 @@ Test your changes with various file types:
 2. Test your changes thoroughly
 3. Update documentation if needed
 4. Add entries to CHANGELOG.md if appropriate
+5. Update version in fft.py `__version__` if this is a version bump
 
 ### Pull Request Process
 
@@ -280,6 +281,28 @@ Feature requests are welcome! When suggesting new features:
 - Describe the proposed solution
 - Consider backward compatibility
 - Be open to discussion and alternatives
+
+## Versioning
+
+This project uses dynamic versioning with the version defined in `fft.py`:
+
+```python
+__version__ = "1.3.0"
+```
+
+### Version Updates
+
+When releasing a new version:
+
+1. Update the `__version__` variable in `fft.py`
+2. Update `CHANGELOG.md` with new version details
+3. The version will automatically be used by the build system
+4. Use `./fft.py --version` to verify the version
+
+The project follows [Semantic Versioning](https://semver.org/):
+- **MAJOR**: Incompatible API changes
+- **MINOR**: New functionality (backward compatible)
+- **PATCH**: Bug fixes (backward compatible)
 
 ## Development Tips
 

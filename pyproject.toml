@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "fft"
-version = "1.3.0"
+dynamic = ["version"]
 authors = [
     {name = "FFT Project"},
 ]
@@ -52,3 +52,6 @@ fft = "fft:main"
 
 [tool.setuptools]
 py-modules = ["fft"]
+
+[tool.setuptools.dynamic]
+version = {attr = "fft.__version__"}

@@ -10,6 +10,8 @@ FFT - File Type Tester
 Determines the file type of files using filesystem, magic, and language tests.
 """
 
+__version__ = "1.3.0"
+
 import argparse
 import mimetypes
 import os
@@ -225,6 +227,12 @@ def main():
         "--verbose",
         action="store_true",
         help="Show which test category detected the file type",
+    )
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"%(prog)s {__version__}",
+        help="Show version information",
     )
 
     args = parser.parse_args()
