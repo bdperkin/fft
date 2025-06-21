@@ -43,6 +43,8 @@ dev = [
 Homepage = "https://github.com/user/fft"
 Repository = "https://github.com/user/fft.git"
 Issues = "https://github.com/user/fft/issues"
+Changelog = "https://github.com/user/fft/blob/main/CHANGELOG.md"
+Contributing = "https://github.com/user/fft/blob/main/CONTRIBUTING.md"
 
 [project.scripts]
 fft = "fft:main"

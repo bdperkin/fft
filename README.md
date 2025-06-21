@@ -19,6 +19,8 @@ This project uses the modern `pyproject.toml` build system (PEP 621).
 
 See [CHANGELOG.md](CHANGELOG.md) for version history and release notes.
 
+For contributing guidelines, see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 On Ubuntu/Debian:
 ```bash
 sudo apt-get install libmagic1
