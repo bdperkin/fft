@@ -33,6 +33,9 @@ Print internal debugging information to stderr. Shows detailed information about
 .BR \-E ", " \-\-exit\-on\-error
 Exit immediately on filesystem errors instead of continuing. When this option is enabled, the program will exit with status code 1 on the first encountered error (such as file not found or permission denied) rather than printing an error message and continuing to process remaining files.
 .TP
+.BR \-\-extension
+Print a slash-separated list of valid extensions for the file type found. Instead of showing the file type name, this option displays the known file extensions associated with the detected file type. For file types with multiple extensions (like JPEG), all extensions are shown separated by forward slashes.
+.TP
 .BR \-\-version
 Show version information and exit.
 .TP
@@ -161,6 +164,29 @@ Output:
 .: directory (empty or inaccessible)
 /bin/bash: executable script
 /nonexistent/file: ERROR: File or directory '/nonexistent/file' does not exist
+.fi
+.TP
+Show file extensions instead of file types:
+.B fft \-\-extension
+script.py image.jpg document.html style.css
+.PP
+Output:
+.nf
+script.py: py
+image.jpg: jpeg/jpg
+document.html: html
+style.css: css
+.fi
+.TP
+Extension mode with brief output:
+.B fft \-\-extension \-b
+script.py image.jpg document.html
+.PP
+Output:
+.nf
+py
+jpeg/jpg
+html
 .fi
 .SH SUPPORTED FILE TYPES
 .SS Extensions (Filesystem Tests)

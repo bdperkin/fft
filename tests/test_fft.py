@@ -959,7 +959,8 @@ class TestExitOnErrorFunctionality:
                 f2.write("console.log('hello');")
                 f2.flush()
 
-                # Mock sys.argv with existing file, nonexistent file, then another existing file
+                # Mock sys.argv with existing file, nonexistent file, then
+                # another existing file
                 with unittest.mock.patch.object(
                     sys,
                     "argv",
@@ -983,6 +984,148 @@ class TestExitOnErrorFunctionality:
                 os.unlink(f2.name)
 
             os.unlink(f1.name)
+
+
+class TestExtensionFunctionality:
+    """Test cases for the --extension functionality."""
+
+    def test_extension_flag_in_help(self, capsys):
+        """Test that --extension option appears in help text."""
+        with pytest.raises(SystemExit):
+            with unittest.mock.patch("sys.argv", ["fft.py", "--help"]):
+                fft.main()
+
+        captured = capsys.readouterr()
+        assert "--extension" in captured.out
+        assert "Print a slash-separated list of valid extensions" in captured.out
+
+    def test_get_extensions_for_type_single_extension(self):
+        """Test getting extensions for file types with single extension."""
+        tester = fft.FileTypeTester()
+
+        # Test file types with single extensions
+        assert tester.get_extensions_for_type("text file") == "txt"
+        assert tester.get_extensions_for_type("Python script") == "py"
+        assert tester.get_extensions_for_type("JSON data") == "json"
+
+    def test_get_extensions_for_type_multiple_extensions(self):
+        """Test getting extensions for file types with multiple extensions."""
+        tester = fft.FileTypeTester()
+
+        # JPEG has both .jpg and .jpeg extensions
+        result = tester.get_extensions_for_type("JPEG image")
+        assert result == "jpeg/jpg"  # Should be sorted
+
+    def test_get_extensions_for_type_unknown_type(self):
+        """Test getting extensions for unknown file types."""
+        tester = fft.FileTypeTester()
+
+        # Unknown file types should return empty string
+        assert tester.get_extensions_for_type("unknown file type") == ""
+        assert tester.get_extensions_for_type("non-existent type") == ""
+
+    def test_extension_flag_with_known_file_type(self, capsys):
+        """Test --extension flag with files that have known extensions."""
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as f:
+            f.write("print('hello')")
+            f.flush()
+
+            with unittest.mock.patch("sys.argv", ["fft.py", "--extension", f.name]):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert f"{f.name}: py" in captured.out
+
+            os.unlink(f.name)
+
+    def test_extension_flag_with_multiple_extensions(self, capsys):
+        """Test --extension flag with file types having multiple extensions."""
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".jpg") as f:
+            f.write("fake jpeg content")
+            f.flush()
+
+            with unittest.mock.patch("sys.argv", ["fft.py", "--extension", f.name]):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert f"{f.name}: jpeg/jpg" in captured.out
+
+            os.unlink(f.name)
+
+    def test_extension_flag_with_brief_mode(self, capsys):
+        """Test --extension flag combined with --brief mode."""
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".js") as f:
+            f.write("console.log('hello');")
+            f.flush()
+
+            with unittest.mock.patch(
+                "sys.argv", ["fft.py", "--extension", "--brief", f.name]
+            ):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert captured.out.strip() == "js"
+
+            os.unlink(f.name)
+
+    def test_extension_flag_with_unknown_file_type(self, capsys):
+        """Test --extension flag with file types that have no known extensions."""
+        with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
+            f.write("unknown content")
+            f.flush()
+
+            # Make it executable to trigger "executable file" detection
+            os.chmod(f.name, 0o755)
+
+            with unittest.mock.patch("sys.argv", ["fft.py", "--extension", f.name]):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert f"{f.name}: " in captured.out  # Should show empty extensions
+
+            os.unlink(f.name)
+
+    def test_extension_flag_with_multiple_files(self, capsys):
+        """Test --extension flag with multiple files."""
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as f1:
+            with tempfile.NamedTemporaryFile(
+                mode="w", delete=False, suffix=".html"
+            ) as f2:
+                f1.write("print('hello')")
+                f2.write("<html></html>")
+                f1.flush()
+                f2.flush()
+
+                with unittest.mock.patch(
+                    "sys.argv", ["fft.py", "--extension", f1.name, f2.name]
+                ):
+                    fft.main()
+
+                captured = capsys.readouterr()
+                assert f"{f1.name}: py" in captured.out
+                assert f"{f2.name}: html" in captured.out
+
+                os.unlink(f1.name)
+                os.unlink(f2.name)
+
+    def test_extension_flag_with_directory(self, capsys):
+        """Test --extension flag with directory processing."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create files with known extensions
+            py_file = os.path.join(tmpdir, "test.py")
+            js_file = os.path.join(tmpdir, "test.js")
+
+            with open(py_file, "w") as f:
+                f.write("print('hello')")
+            with open(js_file, "w") as f:
+                f.write("console.log('hello');")
+
+            with unittest.mock.patch("sys.argv", ["fft.py", "--extension", tmpdir]):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert f"{js_file}: js" in captured.out
+            assert f"{py_file}: py" in captured.out
 
 
 @pytest.mark.integration

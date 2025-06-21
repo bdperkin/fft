@@ -28,10 +28,61 @@ class FileTypeTester:
         self.mime_detector = magic.Magic(magic.MAGIC_MIME_TYPE)
         self.description_detector = magic.Magic(magic.MAGIC_NONE)
 
+        # Extension to file type mapping
+        self.extension_map = {
+            ".txt": "text file",
+            ".py": "Python script",
+            ".js": "JavaScript file",
+            ".html": "HTML document",
+            ".css": "CSS stylesheet",
+            ".json": "JSON data",
+            ".xml": "XML document",
+            ".csv": "CSV data",
+            ".md": "Markdown document",
+            ".jpg": "JPEG image",
+            ".jpeg": "JPEG image",
+            ".png": "PNG image",
+            ".gif": "GIF image",
+            ".pdf": "PDF document",
+            ".zip": "ZIP archive",
+            ".tar": "TAR archive",
+            ".gz": "GZIP compressed file",
+            ".exe": "Windows executable",
+            ".dll": "Windows DLL",
+            ".so": "shared library",
+            ".a": "static library",
+            ".o": "object file",
+            ".c": "C source file",
+            ".cpp": "C++ source file",
+            ".h": "C/C++ header file",
+            ".java": "Java source file",
+            ".class": "Java bytecode",
+            ".rb": "Ruby script",
+            ".php": "PHP script",
+            ".sh": "shell script",
+            ".bat": "batch file",
+            ".ps1": "PowerShell script",
+        }
+
+        # Build reverse mapping for extension lookup
+        self.type_to_extensions = {}
+        for ext, file_type in self.extension_map.items():
+            if file_type not in self.type_to_extensions:
+                self.type_to_extensions[file_type] = []
+            self.type_to_extensions[file_type].append(ext)
+
     def debug_print(self, message):
         """Print debug message to stderr if debug mode is enabled"""
         if self.debug:
             print(f"DEBUG: {message}", file=sys.stderr)
+
+    def get_extensions_for_type(self, file_type):
+        """Get a slash-separated list of extensions for a given file type"""
+        if file_type in self.type_to_extensions:
+            # Sort extensions and remove the leading dot for display
+            extensions = sorted(self.type_to_extensions[file_type])
+            return "/".join(ext[1:] for ext in extensions)  # Remove leading dot
+        return ""
 
     def filesystem_tests(self, filepath):
         """
@@ -87,43 +138,9 @@ class FileTypeTester:
         # Check common extensions
         extension = path.suffix.lower()
         self.debug_print(f"'{filepath}' has extension: '{extension}'")
-        extension_map = {
-            ".txt": "text file",
-            ".py": "Python script",
-            ".js": "JavaScript file",
-            ".html": "HTML document",
-            ".css": "CSS stylesheet",
-            ".json": "JSON data",
-            ".xml": "XML document",
-            ".csv": "CSV data",
-            ".md": "Markdown document",
-            ".jpg": "JPEG image",
-            ".jpeg": "JPEG image",
-            ".png": "PNG image",
-            ".gif": "GIF image",
-            ".pdf": "PDF document",
-            ".zip": "ZIP archive",
-            ".tar": "TAR archive",
-            ".gz": "GZIP compressed file",
-            ".exe": "Windows executable",
-            ".dll": "Windows DLL",
-            ".so": "shared library",
-            ".a": "static library",
-            ".o": "object file",
-            ".c": "C source file",
-            ".cpp": "C++ source file",
-            ".h": "C/C++ header file",
-            ".java": "Java source file",
-            ".class": "Java bytecode",
-            ".rb": "Ruby script",
-            ".php": "PHP script",
-            ".sh": "shell script",
-            ".bat": "batch file",
-            ".ps1": "PowerShell script",
-        }
 
-        if extension in extension_map:
-            result = extension_map[extension]
+        if extension in self.extension_map:
+            result = self.extension_map[extension]
             self.debug_print(f"Extension '{extension}' mapped to: {result}")
             return result
 
@@ -212,7 +229,8 @@ class FileTypeTester:
             for pattern, file_type in patterns:
                 if re.search(pattern, content, re.MULTILINE | re.IGNORECASE):
                     self.debug_print(
-                        f"Pattern '{pattern}' matched for '{filepath}', detected as: {file_type}"
+                        f"Pattern '{pattern}' matched for '{filepath}', "
+                        f"detected as: {file_type}"
                     )
                     return file_type
 
@@ -221,11 +239,13 @@ class FileTypeTester:
             if len(content) > 0:
                 printable_ratio = printable_chars / len(content)
                 self.debug_print(
-                    f"Printable character ratio for '{filepath}': {printable_ratio:.2f}"
+                    f"Printable character ratio for '{filepath}': "
+                    f"{printable_ratio:.2f}"
                 )
                 if printable_ratio > 0.7:
                     self.debug_print(
-                        f"'{filepath}' detected as text file based on printable character ratio"
+                        f"'{filepath}' detected as text file based on "
+                        f"printable character ratio"
                     )
                     return "text file"
 
@@ -323,6 +343,11 @@ def main():
         help="Exit immediately on filesystem errors instead of continuing",
     )
     parser.add_argument(
+        "--extension",
+        action="store_true",
+        help="Print a slash-separated list of valid extensions for the file type found",
+    )
+    parser.add_argument(
         "--version",
         action="version",
         version=f"%(prog)s {__version__}",
@@ -345,7 +370,20 @@ def main():
             print(file_type, file=sys.stderr)
             sys.exit(1)
 
-        if args.brief:
+        if args.extension:
+            # Extension mode: show extensions for the file type
+            extensions = tester.get_extensions_for_type(file_type)
+            if extensions:
+                if args.brief:
+                    print(extensions)
+                else:
+                    print(f"{filepath}: {extensions}")
+            else:
+                if args.brief:
+                    print("")
+                else:
+                    print(f"{filepath}: ")
+        elif args.brief:
             # Brief mode: only output the file type
             print(file_type)
         elif args.verbose and test_category:
@@ -420,7 +458,8 @@ def main():
             if files_in_dir:
                 if args.debug:
                     print(
-                        f"DEBUG: Found {len(files_in_dir)} files in directory '{filepath}', sorting...",
+                        f"DEBUG: Found {len(files_in_dir)} files in directory "
+                        f"'{filepath}', sorting...",
                         file=sys.stderr,
                     )
                 for file_in_dir in sorted(files_in_dir):
