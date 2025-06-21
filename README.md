@@ -15,6 +15,8 @@ The first test that successfully identifies the file type will be reported.
 - Python 3.6 or higher
 - libmagic library (for magic number detection)
 
+This project uses the modern `pyproject.toml` build system (PEP 621).
+
 On Ubuntu/Debian:
 ```bash
 sudo apt-get install libmagic1
@@ -27,13 +29,14 @@ sudo dnf install file-libs  # or: sudo yum install file-libs
 
 ### Install Dependencies
 
-```bash
-pip install -r requirements.txt
-```
-
-Or install as a package:
+Install as a package (recommended):
 ```bash
 pip install -e .
+```
+
+Or install dependencies manually:
+```bash
+pip install python-magic>=0.4.24
 ```
 
 ## Usage
