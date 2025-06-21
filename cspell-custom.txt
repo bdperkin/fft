@@ -32,6 +32,7 @@ isort
 mypy
 flake
 pytest
+cpython
 
 # Version control and tooling
 gitignore

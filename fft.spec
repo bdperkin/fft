@@ -155,6 +155,7 @@ fi
 %license LICENSE COPYING
 %doc README.md
 %{python3_sitelib}/%{srcname}.py
+%{python3_sitelib}/__pycache__/%{srcname}.cpython-*.pyc
 %{python3_sitelib}/%{srcname}-%{version}*.dist-info/
 %{_bindir}/%{srcname}
 
