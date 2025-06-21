@@ -87,31 +87,33 @@ install:
 # RPM packaging
 srpm: clean-all
 	@echo "Building source RPM..."
-	tar --exclude='.git*' --exclude='*.rpm' --exclude='*.spec.orig' \
-		-czf fft-$(shell grep '__version__' $(PYTHON_SOURCE) | cut -d'"' -f2).tar.gz \
-		--transform='s,^,fft-$(shell grep '__version__' $(PYTHON_SOURCE) | cut -d'"' -f2)/,' \
-		--exclude-vcs .
-	rpmbuild -ts fft-$(shell grep '__version__' $(PYTHON_SOURCE) | cut -d'"' -f2).tar.gz \
+	@VERSION=$(shell grep '^__version__' $(PYTHON_SOURCE) | cut -d'"' -f2); \
+	echo "Creating source tarball for version $$VERSION..."; \
+	git archive --format=tar.gz --prefix=fft-$$VERSION/ HEAD > fft-$$VERSION.tar.gz; \
+	echo "Building source RPM..."; \
+	rpmbuild -ts fft-$$VERSION.tar.gz \
 		--define "_sourcedir $(PWD)" \
 		--define "_specdir $(PWD)" \
 		--define "_builddir $(PWD)/build" \
 		--define "_srcrpmdir $(PWD)" \
-		--define "_rpmdir $(PWD)"
+		--define "_rpmdir $(PWD)"; \
+	echo "Source RPM build complete. Files created:"; \
+	ls -la fft-$$VERSION.tar.gz python3-fft-$$VERSION-1.*.src.rpm
 
 rpm: srpm
 	@echo "Building binary RPM..."
-	rpmbuild --rebuild python3-fft-$(shell grep '__version__' $(PYTHON_SOURCE) | cut -d'"' -f2)-1.*.src.rpm \
+	rpmbuild --rebuild python3-fft-$(shell grep '^__version__' $(PYTHON_SOURCE) | cut -d'"' -f2)-1.*.src.rpm \
 		--define "_rpmdir $(PWD)" \
 		--define "_builddir $(PWD)/build"
 
 rpm-install: rpm
 	@echo "Installing RPM package..."
-	sudo rpm -Uvh noarch/python3-fft-$(shell grep '__version__' $(PYTHON_SOURCE) | cut -d'"' -f2)-1.*.noarch.rpm
+	sudo rpm -Uvh noarch/python3-fft-$(shell grep '^__version__' $(PYTHON_SOURCE) | cut -d'"' -f2)-1.*.noarch.rpm
 
 rpm-test: rpm
 	@echo "Testing RPM packages..."
-	rpm -qpl python3-fft-$(shell grep '__version__' $(PYTHON_SOURCE) | cut -d'"' -f2)-1.*.src.rpm
-	rpm -qpl noarch/python3-fft-$(shell grep '__version__' $(PYTHON_SOURCE) | cut -d'"' -f2)-1.*.noarch.rpm
+	rpm -qpl python3-fft-$(shell grep '^__version__' $(PYTHON_SOURCE) | cut -d'"' -f2)-1.*.src.rpm
+	rpm -qpl noarch/python3-fft-$(shell grep '^__version__' $(PYTHON_SOURCE) | cut -d'"' -f2)-1.*.noarch.rpm
 
 clean:
 	rm -f $(INFO_FILE)
@@ -137,7 +139,7 @@ clean-all: clean
 # Version update
 update-version:
 	@echo "Current version in fft.py:"
-	@grep "__version__" $(PYTHON_SOURCE)
+	@grep "^__version__" $(PYTHON_SOURCE)
 	@echo "Current version in fft.texi:"
 	@grep "VERSION" $(TEXI_SOURCE)
 
