@@ -17,6 +17,8 @@ The first test that successfully identifies the file type will be reported.
 
 This project uses the modern `pyproject.toml` build system (PEP 621).
 
+See [CHANGELOG.md](CHANGELOG.md) for version history and release notes.
+
 On Ubuntu/Debian:
 ```bash
 sudo apt-get install libmagic1
