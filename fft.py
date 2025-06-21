@@ -23,8 +23,9 @@ import magic
 
 
 class FileTypeTester:
-    def __init__(self, debug=False, no_dereference=None):
+    def __init__(self, debug=False, no_dereference=None, mime=False):
         self.debug = debug
+        self.mime = mime
 
         # Handle no_dereference default based on POSIXLY_CORRECT environment variable
         if no_dereference is None:
@@ -72,6 +73,54 @@ class FileTypeTester:
             ".ps1": "PowerShell script",
         }
 
+        # MIME type mapping for filesystem tests
+        self.extension_mime_map = {
+            ".txt": "text/plain",
+            ".py": "text/x-python",
+            ".js": "text/javascript",
+            ".html": "text/html",
+            ".css": "text/css",
+            ".json": "application/json",
+            ".xml": "application/xml",
+            ".csv": "text/csv",
+            ".md": "text/markdown",
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".png": "image/png",
+            ".gif": "image/gif",
+            ".pdf": "application/pdf",
+            ".zip": "application/zip",
+            ".tar": "application/x-tar",
+            ".gz": "application/gzip",
+            ".exe": "application/x-msdownload",
+            ".dll": "application/x-msdownload",
+            ".so": "application/x-sharedlib",
+            ".a": "application/x-archive",
+            ".o": "application/x-object",
+            ".c": "text/x-c",
+            ".cpp": "text/x-c++",
+            ".h": "text/x-c",
+            ".java": "text/x-java-source",
+            ".class": "application/java-vm",
+            ".rb": "text/x-ruby",
+            ".php": "text/x-php",
+            ".sh": "text/x-shellscript",
+            ".bat": "text/x-msdos-batch",
+            ".ps1": "text/x-powershell",
+        }
+
+        # File type to MIME type mapping for special filesystem types
+        self.filesystem_mime_map = {
+            "directory": "inode/directory",
+            "symbolic link": "inode/symlink",
+            "block device": "inode/blockdevice",
+            "character device": "inode/chardevice",
+            "FIFO (named pipe)": "inode/fifo",
+            "socket": "inode/socket",
+            "executable file": "application/x-executable",
+            "executable script": "text/x-shellscript",
+        }
+
         # Build reverse mapping for extension lookup
         self.type_to_extensions = {}
         for ext, file_type in self.extension_map.items():
@@ -103,12 +152,15 @@ class FileTypeTester:
         if path.is_symlink():
             self.debug_print(f"'{filepath}' is a symbolic link")
             if self.no_dereference:
-                # Don't follow symlinks - return "symbolic link"
+                # Don't follow symlinks - return "symbolic link" or MIME
                 self.debug_print(
                     f"Not dereferencing symlink '{filepath}' "
                     f"(no_dereference={self.no_dereference})"
                 )
-                return "symbolic link"
+                if self.mime:
+                    return self.filesystem_mime_map["symbolic link"]
+                else:
+                    return "symbolic link"
             else:
                 # Follow symlinks - continue with analysis of the target
                 self.debug_print(
@@ -120,23 +172,38 @@ class FileTypeTester:
         # Check if it's a directory
         if path.is_dir():
             self.debug_print(f"'{filepath}' is a directory")
-            return "directory"
+            if self.mime:
+                return self.filesystem_mime_map["directory"]
+            else:
+                return "directory"
 
         # Check if it's a block or character device
         if path.is_block_device():
             self.debug_print(f"'{filepath}' is a block device")
-            return "block device"
+            if self.mime:
+                return self.filesystem_mime_map["block device"]
+            else:
+                return "block device"
         if path.is_char_device():
             self.debug_print(f"'{filepath}' is a character device")
-            return "character device"
+            if self.mime:
+                return self.filesystem_mime_map["character device"]
+            else:
+                return "character device"
 
         # Check if it's a FIFO or socket
         if path.is_fifo():
             self.debug_print(f"'{filepath}' is a FIFO")
-            return "FIFO (named pipe)"
+            if self.mime:
+                return self.filesystem_mime_map["FIFO (named pipe)"]
+            else:
+                return "FIFO (named pipe)"
         if path.is_socket():
             self.debug_print(f"'{filepath}' is a socket")
-            return "socket"
+            if self.mime:
+                return self.filesystem_mime_map["socket"]
+            else:
+                return "socket"
 
         # Check executable permissions
         if os.access(filepath, os.X_OK) and path.is_file():
@@ -149,21 +216,35 @@ class FileTypeTester:
                         self.debug_print(
                             f"'{filepath}' has shebang, detected as executable script"
                         )
-                        return "executable script"
+                        if self.mime:
+                            return self.filesystem_mime_map["executable script"]
+                        else:
+                            return "executable script"
             except (IOError, OSError) as e:
                 self.debug_print(f"Failed to read first bytes of '{filepath}': {e}")
                 pass
             self.debug_print(f"'{filepath}' is executable but no shebang detected")
-            return "executable file"
+            if self.mime:
+                return self.filesystem_mime_map["executable file"]
+            else:
+                return "executable file"
 
         # Check common extensions
         extension = path.suffix.lower()
         self.debug_print(f"'{filepath}' has extension: '{extension}'")
 
-        if extension in self.extension_map:
-            result = self.extension_map[extension]
-            self.debug_print(f"Extension '{extension}' mapped to: {result}")
-            return result
+        if self.mime:
+            # Return MIME type for extension
+            if extension in self.extension_mime_map:
+                result = self.extension_mime_map[extension]
+                self.debug_print(f"Extension '{extension}' mapped to MIME: {result}")
+                return result
+        else:
+            # Return human-readable type for extension
+            if extension in self.extension_map:
+                result = self.extension_map[extension]
+                self.debug_print(f"Extension '{extension}' mapped to: {result}")
+                return result
 
         self.debug_print(f"Extension '{extension}' not found in mapping")
         return None
@@ -182,29 +263,44 @@ class FileTypeTester:
             description = self.description_detector.from_file(filepath)
             self.debug_print(f"Magic description for '{filepath}': {description}")
 
-            # Return a more readable format
-            if mime_type and description:
-                result = f"{description} ({mime_type})"
-                self.debug_print(f"Magic test result for '{filepath}': {result}")
-                return result
-            elif mime_type:
-                result = f"file of type {mime_type}"
-                self.debug_print(f"Magic test result for '{filepath}': {result}")
-                return result
-            elif description:
-                self.debug_print(f"Magic test result for '{filepath}': {description}")
-                return description
+            # Return MIME type or readable format based on mode
+            if self.mime:
+                # In MIME mode, return just the MIME type
+                if mime_type:
+                    self.debug_print(f"Magic MIME result for '{filepath}': {mime_type}")
+                    return mime_type
+            else:
+                # Return a more readable format
+                if mime_type and description:
+                    result = f"{description} ({mime_type})"
+                    self.debug_print(f"Magic test result for '{filepath}': {result}")
+                    return result
+                elif mime_type:
+                    result = f"file of type {mime_type}"
+                    self.debug_print(f"Magic test result for '{filepath}': {result}")
+                    return result
+                elif description:
+                    self.debug_print(
+                        f"Magic test result for '{filepath}': {description}"
+                    )
+                    return description
 
         except Exception as e:
             self.debug_print(f"Magic test failed for '{filepath}': {e}")
             # Fallback to Python's mimetypes module
             mime_type, _ = mimetypes.guess_type(filepath)
             if mime_type is not None:
-                result = f"file of type {mime_type}"
-                self.debug_print(
-                    f"Fallback mimetypes result for '{filepath}': {result}"
-                )
-                return result
+                if self.mime:
+                    self.debug_print(
+                        f"Fallback MIME result for '{filepath}': {mime_type}"
+                    )
+                    return mime_type
+                else:
+                    result = f"file of type {mime_type}"
+                    self.debug_print(
+                        f"Fallback mimetypes result for '{filepath}': {result}"
+                    )
+                    return result
 
         self.debug_print(f"Magic tests found no result for '{filepath}'")
         return None
@@ -227,33 +323,67 @@ class FileTypeTester:
                     r"#!/usr/bin/env python|#!/usr/bin/python|^import\s+\w+"
                     r"|^from\s+\w+\s+import",
                     "Python script",
+                    "text/x-python",
                 ),
-                (r"#!/bin/bash|#!/bin/sh|^#\s*bash|^#\s*shell", "shell script"),
+                (
+                    r"#!/bin/bash|#!/bin/sh|^#\s*bash|^#\s*shell",
+                    "shell script",
+                    "text/x-shellscript",
+                ),
                 (
                     r"^#!/usr/bin/env node|^const\s+\w+|^let\s+\w+|^var\s+\w+",
                     "JavaScript file",
+                    "text/javascript",
                 ),
-                (r'^#include\s*<.*>|^#include\s*".*"|int\s+main\s*\(', "C/C++ source"),
+                (
+                    r'^#include\s*<.*>|^#include\s*".*"|int\s+main\s*\(',
+                    "C/C++ source",
+                    "text/x-c",
+                ),
                 (
                     r"^package\s+\w+|^public\s+class\s+\w+|^import\s+java\.",
                     "Java source",
+                    "text/x-java-source",
                 ),
-                (r"^<\?php|<\?=|\$\w+\s*=", "PHP script"),
-                (r"^class\s+\w+|^def\s+\w+|^module\s+\w+", "Ruby script"),
-                (r"^<!DOCTYPE html|^<html|^<head>|^<body>", "HTML document"),
-                (r'^\s*{|\s*"[\w-]+"\s*:', "JSON data"),
-                (r"^<\?xml|^<[a-zA-Z][^>]*>", "XML document"),
-                (r"^\s*[\w-]+\s*:\s*[\w-]+|^\s*\.|^\s*#[a-zA-Z]", "CSS stylesheet"),
-                (r"^#+\s+\w+|^\*\s+\w+|^\d+\.\s+\w+", "Markdown document"),
+                (r"^<\?php|<\?=|\$\w+\s*=", "PHP script", "text/x-php"),
+                (
+                    r"^class\s+\w+|^def\s+\w+|^module\s+\w+",
+                    "Ruby script",
+                    "text/x-ruby",
+                ),
+                (
+                    r"^<!DOCTYPE html|^<html|^<head>|^<body>",
+                    "HTML document",
+                    "text/html",
+                ),
+                (r'^\s*{|\s*"[\w-]+"\s*:', "JSON data", "application/json"),
+                (r"^<\?xml|^<[a-zA-Z][^>]*>", "XML document", "application/xml"),
+                (
+                    r"^\s*[\w-]+\s*:\s*[\w-]+|^\s*\.|^\s*#[a-zA-Z]",
+                    "CSS stylesheet",
+                    "text/css",
+                ),
+                (
+                    r"^#+\s+\w+|^\*\s+\w+|^\d+\.\s+\w+",
+                    "Markdown document",
+                    "text/markdown",
+                ),
             ]
 
-            for pattern, file_type in patterns:
+            for pattern, file_type, mime_type in patterns:
                 if re.search(pattern, content, re.MULTILINE | re.IGNORECASE):
-                    self.debug_print(
-                        f"Pattern '{pattern}' matched for '{filepath}', "
-                        f"detected as: {file_type}"
-                    )
-                    return file_type
+                    if self.mime:
+                        self.debug_print(
+                            f"Pattern '{pattern}' matched for '{filepath}', "
+                            f"detected MIME: {mime_type}"
+                        )
+                        return mime_type
+                    else:
+                        self.debug_print(
+                            f"Pattern '{pattern}' matched for '{filepath}', "
+                            f"detected as: {file_type}"
+                        )
+                        return file_type
 
             # Check if it's mostly text
             printable_chars = sum(1 for c in content if c.isprintable() or c.isspace())
@@ -264,11 +394,18 @@ class FileTypeTester:
                     f"{printable_ratio:.2f}"
                 )
                 if printable_ratio > 0.7:
-                    self.debug_print(
-                        f"'{filepath}' detected as text file based on "
-                        f"printable character ratio"
-                    )
-                    return "text file"
+                    if self.mime:
+                        self.debug_print(
+                            f"'{filepath}' detected as text/plain based on "
+                            f"printable character ratio"
+                        )
+                        return "text/plain"
+                    else:
+                        self.debug_print(
+                            f"'{filepath}' detected as text file based on "
+                            f"printable character ratio"
+                        )
+                        return "text file"
 
         except (UnicodeDecodeError, IOError, OSError) as e:
             self.debug_print(f"Language test failed for '{filepath}': {e}")
@@ -323,10 +460,11 @@ class FileTypeTester:
         self.debug_print(
             f"All tests completed for '{filepath}', no definitive type found"
         )
+        unknown_type = "application/octet-stream" if self.mime else "unknown file type"
         if verbose:
-            return "unknown file type", "None"
+            return unknown_type, "None"
         else:
-            return "unknown file type", None
+            return unknown_type, None
 
 
 def read_files_from_namefile(namefile, debug=False, exit_on_error=False):
@@ -389,7 +527,7 @@ def main():
     # Default values
     verbose = False
     brief = False
-
+    mime = False
     debug = False
     exit_on_error = False
     extension = False
@@ -399,7 +537,7 @@ def main():
     any_files_processed = False
 
     # Initialize the tester early so it can be used in file processing
-    tester = FileTypeTester(debug=debug, no_dereference=no_dereference)
+    tester = FileTypeTester(debug=debug, no_dereference=no_dereference, mime=mime)
 
     def process_files_with_current_settings(files_to_process):
         """Process files immediately with current settings"""
@@ -606,6 +744,17 @@ def main():
                 ),
             )
             parser.add_argument(
+                "-i",
+                "--mime",
+                action="store_true",
+                help=(
+                    "Causes the file command to output mime type strings "
+                    "rather than the more traditional human readable ones. "
+                    "Thus it may say 'text/plain; charset=us-ascii' rather "
+                    "than 'ASCII text'."
+                ),
+            )
+            parser.add_argument(
                 "--version",
                 action="version",
                 version=f"%(prog)s {__version__}",
@@ -630,13 +779,23 @@ def main():
         elif arg in ["-d", "--debug"]:
             debug = True
             # Update tester debug setting
-            tester = FileTypeTester(debug=debug, no_dereference=no_dereference)
+            tester = FileTypeTester(
+                debug=debug, no_dereference=no_dereference, mime=mime
+            )
         elif arg in ["-E", "--exit-on-error"]:
             exit_on_error = True
         elif arg in ["-h", "--no-dereference"]:
             no_dereference = True
             # Update tester no_dereference setting
-            tester = FileTypeTester(debug=debug, no_dereference=no_dereference)
+            tester = FileTypeTester(
+                debug=debug, no_dereference=no_dereference, mime=mime
+            )
+        elif arg in ["-i", "--mime"]:
+            mime = True
+            # Update tester mime setting
+            tester = FileTypeTester(
+                debug=debug, no_dereference=no_dereference, mime=mime
+            )
         elif arg == "--extension":
             extension = True
         elif arg in ["-F", "--separator"]:

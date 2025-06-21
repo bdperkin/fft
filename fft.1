@@ -45,6 +45,9 @@ Read the names of the files to be examined from namefile (one per line) before t
 .BR \-h ", " \-\-no\-dereference
 This option causes symlinks not to be followed (on systems that support symbolic links). This is the default if the environment variable POSIXLY_CORRECT is not defined. When this option is enabled, symbolic links are detected and reported as "symbolic link" rather than analyzing the target file. When disabled (dereferencing enabled), symbolic links are followed and the target file is analyzed instead.
 .TP
+.BR \-i ", " \-\-mime
+Causes the file command to output mime type strings rather than the more traditional human readable ones. Thus it may say 'text/plain; charset=us-ascii' rather than "ASCII text". When this option is enabled, all file type detection methods return MIME types instead of descriptive names. For example, Python files show "text/x-python" instead of "Python script", and directories show "inode/directory" instead of "directory".
+.TP
 .BR \-\-version
 Show version information and exit.
 .TP
@@ -282,6 +285,49 @@ Read filenames from standard input:
 .B find /path/to/files -name "*.py" | fft \-f -
 .PP
 Processes all Python files found by the find command.
+.TP
+Output MIME types instead of human-readable descriptions:
+.B fft \-i
+script.py document.pdf image.jpg
+.PP
+Output:
+.nf
+script.py: text/x-python
+document.pdf: application/pdf
+image.jpg: image/jpeg
+.fi
+.TP
+MIME types with brief mode:
+.B fft \-i \-b
+script.py document.pdf README.md
+.PP
+Output:
+.nf
+text/x-python
+application/pdf
+text/plain
+.fi
+.TP
+MIME types showing special filesystem types:
+.B fft \-i \-h
+symlink_file /tmp directory_name
+.PP
+Output:
+.nf
+symlink_file: inode/symlink
+/tmp: inode/directory
+directory_name: inode/directory
+.fi
+.TP
+MIME types with custom separator:
+.B fft \-i \-F " => "
+script.py style.css
+.PP
+Output:
+.nf
+script.py =>  text/x-python
+style.css =>  text/css
+.fi
 .SH SUPPORTED FILE TYPES
 .SS Extensions (Filesystem Tests)
 Text files: .txt, .md, .csv

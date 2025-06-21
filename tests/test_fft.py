@@ -4,6 +4,7 @@
 """Tests for FFT (File Type Tester)."""
 
 import os
+import sys
 import tempfile
 import unittest.mock
 from pathlib import Path
@@ -2018,8 +2019,9 @@ class TestNoDereferenceFunctionality:
                     fft.main()
 
                 captured = capsys.readouterr()
-                assert "symbolic link" in captured.out
-                # Should not show Python script since we're not dereferencing
+
+                # Should show symbolic link since -h flag forces no-dereference
+                assert f"{link_file}: symbolic link" in captured.out
 
         finally:
             # Restore original environment
@@ -2061,4 +2063,343 @@ class TestNoDereferenceFunctionality:
                 fft.main()
 
             captured = capsys.readouterr()
-            assert f"{link_file}: symbolic link" in captured.out
+            expected_output = f"{link_file}: symbolic link"
+            assert expected_output in captured.out
+
+
+class TestMimeFunctionality:
+    """Test MIME output functionality (-i, --mime flags)"""
+
+    def test_mime_flag_in_help(self, capsys):
+        """Test that -i, --mime flags are documented in help output"""
+        with pytest.raises(SystemExit):
+            with unittest.mock.patch.object(sys, "argv", ["fft.py", "--help"]):
+                fft.main()
+
+        captured = capsys.readouterr()
+        assert "-i, --mime" in captured.out
+        assert "mime type strings" in captured.out
+        assert "text/plain; charset=us-ascii" in captured.out
+
+    def test_file_type_tester_mime_parameter(self):
+        """Test that FileTypeTester accepts mime parameter"""
+        tester = fft.FileTypeTester(mime=True)
+        assert tester.mime is True
+
+        tester = fft.FileTypeTester(mime=False)
+        assert tester.mime is False
+
+        # Default should be False
+        tester = fft.FileTypeTester()
+        assert tester.mime is False
+
+    def test_filesystem_tests_mime_extensions(self):
+        """Test that filesystem tests return MIME types for extensions when in MIME mode"""
+        tester = fft.FileTypeTester(mime=True)
+
+        import os
+        import tempfile
+
+        # Test Python file
+        with tempfile.NamedTemporaryFile(suffix=".py", delete=False) as f:
+            f.write(b"print('hello')")
+            f.flush()
+            result = tester.filesystem_tests(f.name)
+            assert result == "text/x-python"
+            os.unlink(f.name)
+
+        # Test JSON file
+        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
+            f.write(b'{"key": "value"}')
+            f.flush()
+            result = tester.filesystem_tests(f.name)
+            assert result == "application/json"
+            os.unlink(f.name)
+
+        # Test text file
+        with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as f:
+            f.write(b"Hello world")
+            f.flush()
+            result = tester.filesystem_tests(f.name)
+            assert result == "text/plain"
+            os.unlink(f.name)
+
+    def test_filesystem_tests_mime_special_types(self):
+        """Test that filesystem tests return MIME types for special file types"""
+        tester = fft.FileTypeTester(mime=True, no_dereference=True)
+
+        import os
+        import tempfile
+
+        # Test directory
+        with tempfile.TemporaryDirectory() as temp_dir:
+            result = tester.filesystem_tests(temp_dir)
+            assert result == "inode/directory"
+
+        # Test symbolic link
+        with tempfile.TemporaryDirectory() as temp_dir:
+            target_file = os.path.join(temp_dir, "target.txt")
+            link_file = os.path.join(temp_dir, "link")
+
+            with open(target_file, "w") as f:
+                f.write("target content")
+
+            os.symlink(target_file, link_file)
+            result = tester.filesystem_tests(link_file)
+            assert result == "inode/symlink"
+
+    def test_magic_tests_mime_mode(self):
+        """Test that magic tests return MIME types in MIME mode"""
+        tester = fft.FileTypeTester(mime=True)
+
+        import os
+        import tempfile
+
+        # Create a test file and mock the magic detector
+        with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as f:
+            f.write(b"Hello world")
+            f.flush()
+
+            with unittest.mock.patch.object(
+                tester.mime_detector, "from_file", return_value="text/plain"
+            ):
+                result = tester.magic_tests(f.name)
+                assert result == "text/plain"
+
+            os.unlink(f.name)
+
+    def test_language_tests_mime_mode(self):
+        """Test that language tests return MIME types in MIME mode"""
+        tester = fft.FileTypeTester(mime=True)
+
+        import os
+        import tempfile
+
+        # Test Python content
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+            f.write("import os\nprint('hello')")
+            f.flush()
+            result = tester.language_tests(f.name)
+            assert result == "text/x-python"
+            os.unlink(f.name)
+
+        # Test JavaScript content
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".js", delete=False) as f:
+            f.write("const x = 5;\nconsole.log(x);")
+            f.flush()
+            result = tester.language_tests(f.name)
+            assert result == "text/javascript"
+            os.unlink(f.name)
+
+        # Test JSON content
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            f.write('{"name": "test", "value": 123}')
+            f.flush()
+            result = tester.language_tests(f.name)
+            assert result == "application/json"
+            os.unlink(f.name)
+
+        # Test plain text fallback
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            f.write("This is plain text with no special patterns.")
+            f.flush()
+            result = tester.language_tests(f.name)
+            assert result == "text/plain"
+            os.unlink(f.name)
+
+    def test_detect_file_type_mime_unknown_fallback(self):
+        """Test that unknown file types return application/octet-stream in MIME mode"""
+        tester = fft.FileTypeTester(mime=True)
+
+        import os
+        import tempfile
+
+        # Create a file that won't match any patterns
+        with tempfile.NamedTemporaryFile(suffix=".unknown", delete=False) as f:
+            f.write(b"\x00\x01\x02\x03\x04")  # Binary content
+            f.flush()
+
+            # Mock all tests to return None to force fallback
+            with unittest.mock.patch.object(
+                tester, "filesystem_tests", return_value=None
+            ):
+                with unittest.mock.patch.object(
+                    tester, "magic_tests", return_value=None
+                ):
+                    with unittest.mock.patch.object(
+                        tester, "language_tests", return_value=None
+                    ):
+                        result, _ = tester.detect_file_type(f.name)
+                        assert result == "application/octet-stream"
+
+            os.unlink(f.name)
+
+    def test_mime_flag_command_line_short(self, capsys):
+        """Test -i flag for MIME output"""
+        import os
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+            f.write("print('hello')")
+            f.flush()
+
+            with unittest.mock.patch.object(sys, "argv", ["fft.py", "-i", f.name]):
+                fft.main()
+
+            captured = capsys.readouterr()
+            expected_output = f"{f.name}: text/x-python"
+            assert expected_output in captured.out
+            os.unlink(f.name)
+
+    def test_mime_flag_command_line_long(self, capsys):
+        """Test --mime flag for MIME output"""
+        import os
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            f.write('{"test": true}')
+            f.flush()
+
+            with unittest.mock.patch.object(sys, "argv", ["fft.py", "--mime", f.name]):
+                fft.main()
+
+            captured = capsys.readouterr()
+            expected_output = f"{f.name}: application/json"
+            assert expected_output in captured.out
+            os.unlink(f.name)
+
+    def test_mime_with_brief_mode(self, capsys):
+        """Test MIME output with brief mode"""
+        import os
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+            f.write("Hello world")
+            f.flush()
+
+            with unittest.mock.patch.object(
+                sys, "argv", ["fft.py", "-i", "-b", f.name]
+            ):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert captured.out.strip() == "text/plain"
+            os.unlink(f.name)
+
+    def test_mime_with_verbose_mode(self, capsys):
+        """Test MIME output with verbose mode"""
+        import os
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+            f.write("import sys")
+            f.flush()
+
+            with unittest.mock.patch.object(
+                sys, "argv", ["fft.py", "-i", "-v", f.name]
+            ):
+                fft.main()
+
+            captured = capsys.readouterr()
+            expected_output = f"{f.name}: text/x-python [Filesystem test]"
+            assert expected_output in captured.out
+            os.unlink(f.name)
+
+    def test_mime_with_custom_separator(self, capsys):
+        """Test MIME output with custom separator"""
+        import os
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".html", delete=False) as f:
+            f.write("<html><body>Test</body></html>")
+            f.flush()
+
+            with unittest.mock.patch.object(
+                sys, "argv", ["fft.py", "-i", "-F", " | ", f.name]
+            ):
+                fft.main()
+
+            captured = capsys.readouterr()
+            expected_output = f"{f.name} |  text/html"
+            assert expected_output in captured.out
+            os.unlink(f.name)
+
+    def test_mime_with_multiple_files(self, capsys):
+        """Test MIME output with multiple files"""
+        import os
+        import tempfile
+
+        files = []
+        try:
+            # Create test files
+            py_file = tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False)
+            py_file.write("print('python')")
+            py_file.flush()
+            files.append(py_file.name)
+
+            json_file = tempfile.NamedTemporaryFile(
+                mode="w", suffix=".json", delete=False
+            )
+            json_file.write('{"type": "json"}')
+            json_file.flush()
+            files.append(json_file.name)
+
+            with unittest.mock.patch.object(sys, "argv", ["fft.py", "-i"] + files):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert f"{py_file.name}: text/x-python" in captured.out
+            assert f"{json_file.name}: application/json" in captured.out
+
+        finally:
+            for file_path in files:
+                if os.path.exists(file_path):
+                    os.unlink(file_path)
+
+    def test_mime_with_symlink_no_dereference(self, capsys):
+        """Test MIME output for symlinks with no-dereference"""
+        import os
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            target_file = os.path.join(temp_dir, "target.txt")
+            link_file = os.path.join(temp_dir, "link.txt")
+
+            with open(target_file, "w") as f:
+                f.write("target content")
+
+            os.symlink(target_file, link_file)
+
+            with unittest.mock.patch.object(
+                sys, "argv", ["fft.py", "-i", "-h", link_file]
+            ):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert f"{link_file}: inode/symlink" in captured.out
+
+    def test_mime_comparison_with_normal_mode(self, capsys):
+        """Test that MIME mode and normal mode produce different output for the same file"""
+        import os
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+            f.write("print('test')")
+            f.flush()
+
+            # Test normal mode
+            with unittest.mock.patch.object(sys, "argv", ["fft.py", f.name]):
+                fft.main()
+            normal_output = capsys.readouterr().out
+
+            # Test MIME mode
+            with unittest.mock.patch.object(sys, "argv", ["fft.py", "-i", f.name]):
+                fft.main()
+            mime_output = capsys.readouterr().out
+
+            # They should be different
+            assert normal_output != mime_output
+            assert "Python script" in normal_output
+            assert "text/x-python" in mime_output
+
+            os.unlink(f.name)

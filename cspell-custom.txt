@@ -104,3 +104,7 @@ rpmbuild
 devel
 preun
 srpm
+
+# MIME type terms
+msdownload
+msdos
