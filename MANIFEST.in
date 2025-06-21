@@ -1,5 +1,6 @@
 include fft.1
 include fft.texi
+include fft.spec
 include Makefile
 include README.md
 include LICENSE

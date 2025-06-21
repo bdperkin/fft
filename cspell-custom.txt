@@ -95,3 +95,11 @@ direntry
 insertcopying
 filll
 vskip
+
+# RPM packaging terms
+RPM
+SRPM
+rpmbuild
+devel
+preun
+srpm

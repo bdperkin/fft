@@ -19,7 +19,9 @@ HTML_DOC = fft.html
 PDF_DOC = fft.pdf
 
 # Default target
-all: docs
+all: help
+
+docs-all: docs pdf
 
 # Documentation targets
 docs: info html
@@ -76,6 +78,35 @@ build:
 install:
 	$(PIP) install -e .
 
+# RPM packaging
+srpm: clean-all
+	@echo "Building source RPM..."
+	tar --exclude='.git*' --exclude='*.rpm' --exclude='*.spec.orig' \
+		-czf fft-$(shell grep '__version__' $(PYTHON_SOURCE) | cut -d'"' -f2).tar.gz \
+		--transform='s,^,fft-$(shell grep '__version__' $(PYTHON_SOURCE) | cut -d'"' -f2)/,' \
+		--exclude-vcs .
+	rpmbuild -ts fft-$(shell grep '__version__' $(PYTHON_SOURCE) | cut -d'"' -f2).tar.gz \
+		--define "_sourcedir $(PWD)" \
+		--define "_specdir $(PWD)" \
+		--define "_builddir $(PWD)/build" \
+		--define "_srcrpmdir $(PWD)" \
+		--define "_rpmdir $(PWD)"
+
+rpm: srpm
+	@echo "Building binary RPM..."
+	rpmbuild --rebuild python3-fft-$(shell grep '__version__' $(PYTHON_SOURCE) | cut -d'"' -f2)-1.*.src.rpm \
+		--define "_rpmdir $(PWD)" \
+		--define "_builddir $(PWD)/build"
+
+rpm-install: rpm
+	@echo "Installing RPM package..."
+	sudo rpm -Uvh noarch/python3-fft-$(shell grep '__version__' $(PYTHON_SOURCE) | cut -d'"' -f2)-1.*.noarch.rpm
+
+rpm-test: rpm
+	@echo "Testing RPM packages..."
+	rpm -qpl python3-fft-$(shell grep '__version__' $(PYTHON_SOURCE) | cut -d'"' -f2)-1.*.src.rpm
+	rpm -qpl noarch/python3-fft-$(shell grep '__version__' $(PYTHON_SOURCE) | cut -d'"' -f2)-1.*.noarch.rpm
+
 clean:
 	rm -f $(INFO_FILE)
 	rm -f $(HTML_DOC)
@@ -92,6 +123,9 @@ clean-all: clean
 	rm -rf dist/
 	rm -rf *.egg-info/
 	rm -rf build/
+	rm -f *.tar.gz
+	rm -f *.src.rpm
+	rm -rf noarch/
 
 # Version update
 update-version:
@@ -103,7 +137,8 @@ update-version:
 # Help target
 help:
 	@echo "Available targets:"
-	@echo "  all         - Build all documentation (default)"
+	@echo "  all         - Show this help message (default)"
+	@echo "  docs-all    - Build all documentation (info, HTML, PDF)"
 	@echo "  docs        - Build info and HTML documentation"
 	@echo "  info        - Build info documentation"
 	@echo "  html        - Build HTML documentation"
@@ -118,9 +153,13 @@ help:
 	@echo "  coverage    - Run tests with coverage report"
 	@echo "  build       - Build distribution packages"
 	@echo "  install     - Install package in development mode"
+	@echo "  srpm        - Build source RPM package"
+	@echo "  rpm         - Build binary RPM package"
+	@echo "  rpm-install - Build and install RPM package"
+	@echo "  rpm-test    - Build and test RPM package contents"
 	@echo "  clean       - Remove generated files"
 	@echo "  clean-all   - Remove all generated and build files"
 	@echo "  update-version - Show current version information"
 	@echo "  help        - Show this help message"
 
-.PHONY: all docs info html pdf test-man test-info install-dev test lint format check coverage build install clean clean-all update-version help
+.PHONY: all docs-all docs info html pdf test-man test-info install-dev test lint format check coverage build install srpm rpm rpm-install rpm-test clean clean-all update-version help
