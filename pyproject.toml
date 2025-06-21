@@ -6,7 +6,10 @@ build-backend = "setuptools.build_meta"
 name = "fft"
 dynamic = ["version"]
 authors = [
-    {name = "FFT Project"},
+    {name = "Brandon Perkins", email = "bdperkin@gmail.com"},
+]
+maintainers = [
+    {name = "Brandon Perkins", email = "bdperkin@gmail.com"},
 ]
 description = "File Type Tester - Determine file types using filesystem, magic, and language tests"
 readme = "README.md"
