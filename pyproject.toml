@@ -30,6 +30,15 @@ dependencies = [
     "python-magic>=0.4.24",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pre-commit>=3.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.5.0",
+]
+
 [project.urls]
 Homepage = "https://github.com/user/fft"
 Repository = "https://github.com/user/fft.git"
@@ -39,4 +48,4 @@ Issues = "https://github.com/user/fft/issues"
 fft = "fft:main"
 
 [tool.setuptools]
-py-modules = ["fft"] 
+py-modules = ["fft"]

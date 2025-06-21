@@ -39,6 +39,19 @@ Or install dependencies manually:
 pip install python-magic>=0.4.24
 ```
 
+### Development Setup
+
+For development with code quality tools:
+```bash
+pip install -e ".[dev]"
+pre-commit install
+```
+
+Run pre-commit on all files:
+```bash
+pre-commit run --all-files
+```
+
 ## Usage
 
 ### Direct Script Execution
@@ -82,6 +95,16 @@ fft file1.txt file2.py file3.jpg
   - HTML, XML, JSON, CSS
   - Markdown documents
 - Text file detection based on printable character ratio
+
+## Development
+
+This project uses pre-commit hooks to maintain code quality:
+
+- **Black**: Code formatting
+- **Flake8**: Linting and style checking
+- **isort**: Import sorting
+- **MyPy**: Type checking
+- **Standard hooks**: Trailing whitespace, YAML/TOML validation, etc.
 
 ## Examples
 
