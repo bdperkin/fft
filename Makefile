@@ -68,7 +68,7 @@ format:
 	isort $(PYTHON_SOURCE)
 
 check:
-	flake8 $(PYTHON_SOURCE)
+	flake8 --max-line-length=88 --extend-ignore=E203 $(PYTHON_SOURCE)
 	mypy $(PYTHON_SOURCE)
 
 coverage:
