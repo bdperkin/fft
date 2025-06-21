@@ -155,7 +155,7 @@ fi
 %license LICENSE COPYING
 %doc README.md
 %{python3_sitelib}/%{srcname}.py
-%{python3_sitelib}/%{srcname}-%{version}-py%{python3_version}.egg-info/
+%{python3_sitelib}/%{srcname}-%{version}*.dist-info/
 %{_bindir}/%{srcname}
 
 %files doc
