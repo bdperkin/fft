@@ -42,3 +42,13 @@ repos:
     hooks:
       - id: cspell
         args: [--config=cspell.json]
+
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: pytest
+        language: system
+        types: [python]
+        pass_filenames: false
+        args: [--tb=short]

@@ -160,6 +160,75 @@ Example for adding TypeScript support:
 
 ## Testing
 
+The project uses pytest for automated testing with comprehensive test coverage.
+
+### Running Tests
+
+```bash
+# Install development dependencies (includes pytest)
+pip install -e .[dev]
+
+# Run all tests
+pytest
+
+# Run tests with verbose output
+pytest -v
+
+# Run tests with coverage report
+pytest --cov=fft --cov-report=term-missing
+
+# Run only integration tests
+pytest -m integration
+
+# Run tests excluding slow tests
+pytest -m "not slow"
+
+# Generate HTML coverage report
+pytest --cov=fft --cov-report=html
+# View coverage report: open htmlcov/index.html
+```
+
+### Test Configuration
+
+Tests are configured in `pyproject.toml`:
+- Test files are in the `tests/` directory
+- Coverage reports are generated in multiple formats (terminal, HTML, XML)
+- Custom markers are available: `slow`, `integration`
+
+### Writing Tests
+
+When adding new functionality, write corresponding tests:
+
+1. **Unit tests**: Test individual methods and functions
+2. **Integration tests**: Test end-to-end functionality
+3. **Edge cases**: Test error conditions and boundary cases
+
+```python
+# Example test structure
+class TestNewFeature:
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.tester = fft.FileTypeTester()
+
+    def test_new_functionality(self):
+        """Test description."""
+        result = self.tester.new_method("test_input")
+        assert result == "expected_output"
+```
+
+Use the provided fixtures in `tests/conftest.py` for common test scenarios:
+- `temp_file`: Temporary file
+- `python_file`: Python script file
+- `executable_file`: Executable file with shebang
+- `json_file`, `html_file`, `markdown_file`: Specific file types
+
+### Test Coverage
+
+The project maintains high test coverage (currently ~83%). When adding new code:
+- Write tests for all new functions and methods
+- Test both success and error conditions
+- Include integration tests for user-facing features
+
 ### Manual Testing
 
 Test your changes with various file types:
@@ -170,6 +239,9 @@ Test your changes with various file types:
 
 # Test verbose mode
 ./fft.py -v fft.py README.md pyproject.toml
+
+# Test brief mode
+./fft.py -b fft.py README.md pyproject.toml
 
 # Test edge cases
 ./fft.py /dev/null . /nonexistent/file
@@ -186,6 +258,7 @@ Test your changes with various file types:
 - [ ] Text files without extensions
 - [ ] Files with multiple possible types
 - [ ] Non-existent files (error handling)
+- [ ] Command line options (`-v`, `-b`, `--version`)
 
 ## Submitting Changes
 

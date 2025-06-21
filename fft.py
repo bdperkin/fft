@@ -229,6 +229,12 @@ def main():
         help="Show which test category detected the file type",
     )
     parser.add_argument(
+        "-b",
+        "--brief",
+        action="store_true",
+        help="Do not prepend filenames to output lines (brief mode)",
+    )
+    parser.add_argument(
         "--version",
         action="version",
         version=f"%(prog)s {__version__}",
@@ -246,9 +252,14 @@ def main():
             filepath, verbose=args.verbose
         )
 
-        if args.verbose and test_category:
+        if args.brief:
+            # Brief mode: only output the file type
+            print(file_type)
+        elif args.verbose and test_category:
+            # Verbose mode: include test category
             print(f"{filepath}: {file_type} [{test_category} test]")
         else:
+            # Default mode: filename and file type
             print(f"{filepath}: {file_type}")
 
 

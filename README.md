@@ -56,6 +56,11 @@ Run pre-commit on all files:
 pre-commit run --all-files
 ```
 
+Run tests:
+```bash
+pytest
+```
+
 ## Usage
 
 ### Direct Script Execution
