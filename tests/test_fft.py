@@ -588,6 +588,190 @@ class TestDirectoryProcessing:
             assert any(os.path.join("subdir", "nested", "file3.js") in f for f in files)
 
 
+class TestDebugFunctionality:
+    """Test cases for debug functionality."""
+
+    def test_debug_mode_initialization(self):
+        """Test that debug mode is properly initialized."""
+        # Test debug mode enabled
+        tester_debug = fft.FileTypeTester(debug=True)
+        assert tester_debug.debug is True
+
+        # Test debug mode disabled (default)
+        tester_normal = fft.FileTypeTester()
+        assert tester_normal.debug is False
+
+    def test_debug_print_enabled(self, capsys):
+        """Test that debug_print outputs to stderr when debug is enabled."""
+        tester = fft.FileTypeTester(debug=True)
+        tester.debug_print("Test debug message")
+
+        captured = capsys.readouterr()
+        assert captured.err == "DEBUG: Test debug message\n"
+        assert captured.out == ""
+
+    def test_debug_print_disabled(self, capsys):
+        """Test that debug_print is silent when debug is disabled."""
+        tester = fft.FileTypeTester(debug=False)
+        tester.debug_print("Test debug message")
+
+        captured = capsys.readouterr()
+        assert captured.err == ""
+        assert captured.out == ""
+
+    def test_main_with_debug_flag(self, capsys):
+        """Test main function with debug flag."""
+        import sys
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as f:
+            f.write("print('hello')")
+            f.flush()
+
+            # Mock sys.argv to simulate debug mode
+            with unittest.mock.patch.object(sys, "argv", ["fft.py", "-d", f.name]):
+                fft.main()
+
+            captured = capsys.readouterr()
+
+            # Check that debug output is present in stderr
+            assert "DEBUG: Processing 1 argument(s)" in captured.err
+            assert "DEBUG: Starting file type detection" in captured.err
+            assert "DEBUG: Running filesystem tests" in captured.err
+
+            # Check that normal output is still in stdout
+            assert "Python script" in captured.out
+
+            os.unlink(f.name)
+
+    def test_debug_filesystem_tests(self, capsys):
+        """Test debug output in filesystem tests."""
+        import tempfile
+
+        tester = fft.FileTypeTester(debug=True)
+
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as f:
+            f.write("print('hello')")
+            f.flush()
+
+            result = tester.filesystem_tests(f.name)
+
+            captured = capsys.readouterr()
+            assert "DEBUG: Running filesystem tests" in captured.err
+            assert "DEBUG: Extension '.py' mapped to: Python script" in captured.err
+            assert result == "Python script"
+
+            os.unlink(f.name)
+
+    def test_debug_magic_tests(self, capsys):
+        """Test debug output in magic tests."""
+        import tempfile
+
+        tester = fft.FileTypeTester(debug=True)
+
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json") as f:
+            f.write('{"test": "data"}')
+            f.flush()
+
+            tester.magic_tests(f.name)
+
+            captured = capsys.readouterr()
+            assert "DEBUG: Running magic tests" in captured.err
+            assert "DEBUG: Magic MIME type" in captured.err
+            assert "DEBUG: Magic description" in captured.err
+
+            os.unlink(f.name)
+
+    def test_debug_language_tests(self, capsys):
+        """Test debug output in language tests."""
+        import tempfile
+
+        tester = fft.FileTypeTester(debug=True)
+
+        with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
+            f.write("print('hello world')")
+            f.flush()
+
+            tester.language_tests(f.name)
+
+            captured = capsys.readouterr()
+            assert "DEBUG: Running language tests" in captured.err
+            assert "DEBUG: Read" in captured.err and "characters from" in captured.err
+
+            os.unlink(f.name)
+
+    def test_debug_detect_file_type_all_tests(self, capsys):
+        """Test debug output shows all test attempts."""
+        import tempfile
+
+        tester = fft.FileTypeTester(debug=True)
+
+        # Create a file with no extension to force multiple test attempts
+        with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
+            f.write('{"name": "test"}')
+            f.flush()
+
+            result, category = tester.detect_file_type(f.name)
+
+            captured = capsys.readouterr()
+            assert "DEBUG: Starting file type detection" in captured.err
+            assert "DEBUG: Trying Filesystem test" in captured.err
+            assert "DEBUG: Trying Magic test" in captured.err
+
+            os.unlink(f.name)
+
+    def test_debug_directory_processing(self, capsys):
+        """Test debug output for directory processing."""
+        import sys
+        import tempfile
+
+        # Create a temporary directory with test files
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create test files
+            py_file = os.path.join(tmpdir, "test.py")
+            with open(py_file, "w") as f:
+                f.write("print('hello')")
+
+            # Mock sys.argv to test directory processing with debug
+            with unittest.mock.patch.object(sys, "argv", ["fft.py", "-d", tmpdir]):
+                fft.main()
+
+            captured = capsys.readouterr()
+
+            # Check directory processing debug output
+            assert "DEBUG: Processing 1 argument(s)" in captured.err
+            assert "is a directory, processing recursively" in captured.err
+            assert "DEBUG: Scanning directory" in captured.err
+            assert "DEBUG: Found" in captured.err and "files in" in captured.err
+            assert "DEBUG: Added file" in captured.err
+
+    def test_debug_help_option(self, capsys):
+        """Test that debug option appears in help."""
+        import sys
+
+        # Mock sys.argv to simulate --help
+        with unittest.mock.patch.object(sys, "argv", ["fft.py", "--help"]):
+            with pytest.raises(SystemExit):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert "-d, --debug" in captured.out
+            assert "Print internal debugging information to stderr" in captured.out
+
+    def test_debug_with_nonexistent_file(self, capsys):
+        """Test debug output with nonexistent file."""
+        tester = fft.FileTypeTester(debug=True)
+
+        result, category = tester.detect_file_type("/nonexistent/file.txt")
+
+        captured = capsys.readouterr()
+        assert "DEBUG: Starting file type detection" in captured.err
+        assert (
+            "DEBUG: ERROR: File '/nonexistent/file.txt' does not exist" in captured.err
+        )
+        assert "ERROR:" in result
+
+
 @pytest.mark.integration
 class TestIntegration:
     """Integration tests for the FFT tool."""

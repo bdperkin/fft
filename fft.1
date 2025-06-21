@@ -27,6 +27,9 @@ Do not prepend filenames to output lines (brief mode). Only the file type is dis
 .BR \-r ", " \-\-recursive
 Recursively process directories (default when directory is given). This option is automatically enabled when a directory argument is provided.
 .TP
+.BR \-d ", " \-\-debug
+Print internal debugging information to stderr. Shows detailed information about the file type detection process including which tests are being run, their results, and directory processing details.
+.TP
 .BR \-\-version
 Show version information and exit.
 .TP
@@ -110,6 +113,27 @@ Output:
 /home/user/project/tests/test_main.py: Python script
 .fi
 .TP
+Debug mode showing internal processing details:
+.B fft \-d
+script.py
+.PP
+Output to stdout:
+.nf
+script.py: Python script
+.fi
+.PP
+Debug output to stderr:
+.nf
+DEBUG: Processing 1 argument(s): ['script.py']
+DEBUG: 'script.py' is a file, processing directly
+DEBUG: Starting file type detection for 'script.py'
+DEBUG: Trying Filesystem test for 'script.py'
+DEBUG: Running filesystem tests on 'script.py'
+DEBUG: 'script.py' has extension: '.py'
+DEBUG: Extension '.py' mapped to: Python script
+DEBUG: Filesystem test succeeded for 'script.py': Python script
+.fi
+.TP
 Test various file types including directories:
 .B fft
 /dev/null . /bin/bash /nonexistent/file
@@ -171,6 +195,10 @@ Directory arguments are automatically processed recursively, finding all files w
 Files within directories are processed in sorted order by full path
 .IP \(bu 2
 Empty or inaccessible directories display a special message
+.IP \(bu 2
+Debug mode outputs detailed processing information to stderr while normal results go to stdout
+.IP \(bu 2
+Debug output includes test execution order, results, and file discovery details
 .SH BUGS
 Report bugs to: https://github.com/bdperkin/fft/issues
 .SH SEE ALSO

@@ -16,56 +16,77 @@ import argparse
 import mimetypes
 import os
 import re
+import sys
 from pathlib import Path
 
 import magic
 
 
 class FileTypeTester:
-    def __init__(self):
+    def __init__(self, debug=False):
+        self.debug = debug
         self.mime_detector = magic.Magic(magic.MAGIC_MIME_TYPE)
         self.description_detector = magic.Magic(magic.MAGIC_NONE)
+
+    def debug_print(self, message):
+        """Print debug message to stderr if debug mode is enabled"""
+        if self.debug:
+            print(f"DEBUG: {message}", file=sys.stderr)
 
     def filesystem_tests(self, filepath):
         """
         Filesystem-based tests: check extension, permissions, special files
         """
+        self.debug_print(f"Running filesystem tests on '{filepath}'")
         path = Path(filepath)
 
         # Check if it's a directory
         if path.is_dir():
+            self.debug_print(f"'{filepath}' is a directory")
             return "directory"
 
         # Check if it's a symbolic link
         if path.is_symlink():
+            self.debug_print(f"'{filepath}' is a symbolic link")
             return "symbolic link"
 
         # Check if it's a block or character device
         if path.is_block_device():
+            self.debug_print(f"'{filepath}' is a block device")
             return "block device"
         if path.is_char_device():
+            self.debug_print(f"'{filepath}' is a character device")
             return "character device"
 
         # Check if it's a FIFO or socket
         if path.is_fifo():
+            self.debug_print(f"'{filepath}' is a FIFO")
             return "FIFO (named pipe)"
         if path.is_socket():
+            self.debug_print(f"'{filepath}' is a socket")
             return "socket"
 
         # Check executable permissions
         if os.access(filepath, os.X_OK) and path.is_file():
+            self.debug_print(f"'{filepath}' has executable permissions")
             # Check if it starts with shebang
             try:
                 with open(filepath, "rb") as f:
                     first_bytes = f.read(2)
                     if first_bytes == b"#!":
+                        self.debug_print(
+                            f"'{filepath}' has shebang, detected as executable script"
+                        )
                         return "executable script"
-            except (IOError, OSError):
+            except (IOError, OSError) as e:
+                self.debug_print(f"Failed to read first bytes of '{filepath}': {e}")
                 pass
+            self.debug_print(f"'{filepath}' is executable but no shebang detected")
             return "executable file"
 
         # Check common extensions
         extension = path.suffix.lower()
+        self.debug_print(f"'{filepath}' has extension: '{extension}'")
         extension_map = {
             ".txt": "text file",
             ".py": "Python script",
@@ -102,45 +123,65 @@ class FileTypeTester:
         }
 
         if extension in extension_map:
-            return extension_map[extension]
+            result = extension_map[extension]
+            self.debug_print(f"Extension '{extension}' mapped to: {result}")
+            return result
 
+        self.debug_print(f"Extension '{extension}' not found in mapping")
         return None
 
     def magic_tests(self, filepath):
         """
         Magic number tests using libmagic
         """
+        self.debug_print(f"Running magic tests on '{filepath}'")
         try:
             # Get MIME type
             mime_type = self.mime_detector.from_file(filepath)
+            self.debug_print(f"Magic MIME type for '{filepath}': {mime_type}")
 
             # Get file description
             description = self.description_detector.from_file(filepath)
+            self.debug_print(f"Magic description for '{filepath}': {description}")
 
             # Return a more readable format
             if mime_type and description:
-                return f"{description} ({mime_type})"
+                result = f"{description} ({mime_type})"
+                self.debug_print(f"Magic test result for '{filepath}': {result}")
+                return result
             elif mime_type:
-                return f"file of type {mime_type}"
+                result = f"file of type {mime_type}"
+                self.debug_print(f"Magic test result for '{filepath}': {result}")
+                return result
             elif description:
+                self.debug_print(f"Magic test result for '{filepath}': {description}")
                 return description
 
-        except Exception:
+        except Exception as e:
+            self.debug_print(f"Magic test failed for '{filepath}': {e}")
             # Fallback to Python's mimetypes module
             mime_type, _ = mimetypes.guess_type(filepath)
             if mime_type:
-                return f"file of type {mime_type}"
+                result = f"file of type {mime_type}"
+                self.debug_print(
+                    f"Fallback mimetypes result for '{filepath}': {result}"
+                )
+                return result
 
+        self.debug_print(f"Magic tests found no result for '{filepath}'")
         return None
 
     def language_tests(self, filepath):
         """
         Language detection tests based on file content analysis
         """
+        self.debug_print(f"Running language tests on '{filepath}'")
         try:
             # Try to read the file as text
             with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
                 content = f.read(1024)  # Read first 1KB
+
+            self.debug_print(f"Read {len(content)} characters from '{filepath}'")
 
             # Check for specific language patterns
             patterns = [
@@ -170,24 +211,41 @@ class FileTypeTester:
 
             for pattern, file_type in patterns:
                 if re.search(pattern, content, re.MULTILINE | re.IGNORECASE):
+                    self.debug_print(
+                        f"Pattern '{pattern}' matched for '{filepath}', detected as: {file_type}"
+                    )
                     return file_type
 
             # Check if it's mostly text
             printable_chars = sum(1 for c in content if c.isprintable() or c.isspace())
-            if len(content) > 0 and printable_chars / len(content) > 0.7:
-                return "text file"
+            if len(content) > 0:
+                printable_ratio = printable_chars / len(content)
+                self.debug_print(
+                    f"Printable character ratio for '{filepath}': {printable_ratio:.2f}"
+                )
+                if printable_ratio > 0.7:
+                    self.debug_print(
+                        f"'{filepath}' detected as text file based on printable character ratio"
+                    )
+                    return "text file"
 
-        except (UnicodeDecodeError, IOError, OSError):
+        except (UnicodeDecodeError, IOError, OSError) as e:
+            self.debug_print(f"Language test failed for '{filepath}': {e}")
             pass
 
+        self.debug_print(f"Language tests found no result for '{filepath}'")
         return None
 
     def detect_file_type(self, filepath, verbose=False):
         """
         Main detection method that runs tests in order
         """
+        self.debug_print(f"Starting file type detection for '{filepath}'")
+
         if not os.path.exists(filepath):
-            return f"ERROR: File '{filepath}' does not exist", None
+            error_msg = f"ERROR: File '{filepath}' does not exist"
+            self.debug_print(error_msg)
+            return error_msg, None
 
         # Run tests in order
         tests = [
@@ -197,17 +255,29 @@ class FileTypeTester:
         ]
 
         for test_name, test_func in tests:
+            self.debug_print(f"Trying {test_name} test for '{filepath}'")
             try:
                 result = test_func(filepath)
                 if result:
+                    self.debug_print(
+                        f"{test_name} test succeeded for '{filepath}': {result}"
+                    )
                     if verbose:
                         return result, test_name
                     else:
                         return result, None
-            except Exception:
+                else:
+                    self.debug_print(
+                        f"{test_name} test returned no result for '{filepath}'"
+                    )
+            except Exception as e:
+                self.debug_print(f"{test_name} test failed for '{filepath}': {e}")
                 # Continue to next test if current one fails
                 continue
 
+        self.debug_print(
+            f"All tests completed for '{filepath}', no definitive type found"
+        )
         if verbose:
             return "unknown file type", "None"
         else:
@@ -241,6 +311,12 @@ def main():
         help="Recursively process directories (default when directory is given)",
     )
     parser.add_argument(
+        "-d",
+        "--debug",
+        action="store_true",
+        help="Print internal debugging information to stderr",
+    )
+    parser.add_argument(
         "--version",
         action="version",
         version=f"%(prog)s {__version__}",
@@ -250,7 +326,7 @@ def main():
     args = parser.parse_args()
 
     # Initialize the tester
-    tester = FileTypeTester()
+    tester = FileTypeTester(debug=args.debug)
 
     def process_file(filepath):
         """Process a single file and output the result"""
@@ -270,28 +346,73 @@ def main():
 
     def get_files_from_directory(directory_path):
         """Recursively get all files from a directory"""
+        if args.debug:
+            print(
+                f"DEBUG: Scanning directory '{directory_path}' for files",
+                file=sys.stderr,
+            )
         files = []
         try:
             for root, dirs, filenames in os.walk(directory_path):
+                if args.debug:
+                    print(
+                        f"DEBUG: Found {len(filenames)} files in '{root}'",
+                        file=sys.stderr,
+                    )
                 for filename in filenames:
-                    files.append(os.path.join(root, filename))
+                    full_path = os.path.join(root, filename)
+                    files.append(full_path)
+                    if args.debug:
+                        print(
+                            f"DEBUG: Added file '{full_path}' to processing list",
+                            file=sys.stderr,
+                        )
         except (OSError, PermissionError) as e:
-            print(f"ERROR: Cannot access directory '{directory_path}': {e}")
+            error_msg = f"ERROR: Cannot access directory '{directory_path}': {e}"
+            print(error_msg)
+            if args.debug:
+                print(f"DEBUG: {error_msg}", file=sys.stderr)
         return files
 
     # Process each file or directory
+    if args.debug:
+        print(
+            f"DEBUG: Processing {len(args.files)} argument(s): {args.files}",
+            file=sys.stderr,
+        )
+
     for filepath in args.files:
         path = Path(filepath)
 
         if path.is_dir():
+            if args.debug:
+                print(
+                    f"DEBUG: '{filepath}' is a directory, processing recursively",
+                    file=sys.stderr,
+                )
             # Process directory recursively
             files_in_dir = get_files_from_directory(filepath)
             if files_in_dir:
+                if args.debug:
+                    print(
+                        f"DEBUG: Found {len(files_in_dir)} files in directory '{filepath}', sorting...",
+                        file=sys.stderr,
+                    )
                 for file_in_dir in sorted(files_in_dir):
                     process_file(file_in_dir)
             else:
+                if args.debug:
+                    print(
+                        f"DEBUG: Directory '{filepath}' is empty or inaccessible",
+                        file=sys.stderr,
+                    )
                 print(f"{filepath}: directory (empty or inaccessible)")
         else:
+            if args.debug:
+                print(
+                    f"DEBUG: '{filepath}' is a file, processing directly",
+                    file=sys.stderr,
+                )
             # Process single file
             process_file(filepath)
 
