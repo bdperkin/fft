@@ -20,7 +20,7 @@ BuildArch:      noarch
 
 # Build dependencies
 BuildRequires:  python3-devel
-BuildRequires:  python3-setuptools
+BuildRequires:  python3-build
 BuildRequires:  python3-pip
 BuildRequires:  python3-wheel
 BuildRequires:  texinfo
@@ -87,8 +87,8 @@ This package contains development files for FFT including:
 %autosetup -n %{srcname}-%{version}
 
 %build
-# Build Python package
-%py3_build
+# Build Python package using modern build system
+%{python3} -m build --wheel --no-isolation
 
 # Build documentation
 %if 0%{?fedora} >= 28 || 0%{?rhel} >= 8
@@ -98,7 +98,7 @@ makeinfo --html --no-split %{srcname}.texi
 
 %install
 # Install Python package
-%py3_install
+%{python3} -m pip install --no-deps --no-build-isolation dist/*.whl --root %{buildroot} --prefix /usr
 
 # Install manual page
 install -Dpm 644 %{srcname}.1 %{buildroot}%{_mandir}/man1/%{srcname}.1
