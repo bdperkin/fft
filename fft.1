@@ -30,6 +30,9 @@ Recursively process directories (default when directory is given). This option i
 .BR \-d ", " \-\-debug
 Print internal debugging information to stderr. Shows detailed information about the file type detection process including which tests are being run, their results, and directory processing details.
 .TP
+.BR \-E ", " \-\-exit\-on\-error
+Exit immediately on filesystem errors instead of continuing. When this option is enabled, the program will exit with status code 1 on the first encountered error (such as file not found or permission denied) rather than printing an error message and continuing to process remaining files.
+.TP
 .BR \-\-version
 Show version information and exit.
 .TP
@@ -134,7 +137,21 @@ DEBUG: Extension '.py' mapped to: Python script
 DEBUG: Filesystem test succeeded for 'script.py': Python script
 .fi
 .TP
-Test various file types including directories:
+Exit immediately on errors with -E flag:
+.B fft \-E
+existing_file.py /nonexistent/file.txt another_file.js
+.PP
+Output to stdout:
+.nf
+existing_file.py: Python script
+.fi
+.PP
+Output to stderr and exit status 1:
+.nf
+ERROR: File or directory '/nonexistent/file.txt' does not exist
+.fi
+.TP
+Test various file types including directories (normal behavior):
 .B fft
 /dev/null . /bin/bash /nonexistent/file
 .PP
@@ -143,7 +160,7 @@ Output:
 /dev/null: character device
 .: directory (empty or inaccessible)
 /bin/bash: executable script
-/nonexistent/file: ERROR: File '/nonexistent/file' does not exist
+/nonexistent/file: ERROR: File or directory '/nonexistent/file' does not exist
 .fi
 .SH SUPPORTED FILE TYPES
 .SS Extensions (Filesystem Tests)
@@ -199,6 +216,12 @@ Empty or inaccessible directories display a special message
 Debug mode outputs detailed processing information to stderr while normal results go to stdout
 .IP \(bu 2
 Debug output includes test execution order, results, and file discovery details
+.IP \(bu 2
+Exit-on-error mode (-E) sends error messages to stderr and exits with status code 1
+.IP \(bu 2
+Without -E flag, errors are printed to stdout and processing continues with remaining files
+.IP \(bu 2
+Exit-on-error mode stops processing immediately after the first filesystem error
 .SH BUGS
 Report bugs to: https://github.com/bdperkin/fft/issues
 .SH SEE ALSO

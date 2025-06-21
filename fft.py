@@ -317,6 +317,12 @@ def main():
         help="Print internal debugging information to stderr",
     )
     parser.add_argument(
+        "-E",
+        "--exit-on-error",
+        action="store_true",
+        help="Exit immediately on filesystem errors instead of continuing",
+    )
+    parser.add_argument(
         "--version",
         action="version",
         version=f"%(prog)s {__version__}",
@@ -333,6 +339,11 @@ def main():
         file_type, test_category = tester.detect_file_type(
             filepath, verbose=args.verbose
         )
+
+        # Check for errors and exit if -E flag is enabled
+        if args.exit_on_error and file_type.startswith("ERROR:"):
+            print(file_type, file=sys.stderr)
+            sys.exit(1)
 
         if args.brief:
             # Brief mode: only output the file type
@@ -369,9 +380,13 @@ def main():
                         )
         except (OSError, PermissionError) as e:
             error_msg = f"ERROR: Cannot access directory '{directory_path}': {e}"
-            print(error_msg)
-            if args.debug:
-                print(f"DEBUG: {error_msg}", file=sys.stderr)
+            if args.exit_on_error:
+                print(error_msg, file=sys.stderr)
+                sys.exit(1)
+            else:
+                print(error_msg)
+                if args.debug:
+                    print(f"DEBUG: {error_msg}", file=sys.stderr)
         return files
 
     # Process each file or directory
@@ -383,6 +398,16 @@ def main():
 
     for filepath in args.files:
         path = Path(filepath)
+
+        # Check if the path exists at all
+        if not path.exists():
+            error_msg = f"ERROR: File or directory '{filepath}' does not exist"
+            if args.exit_on_error:
+                print(error_msg, file=sys.stderr)
+                sys.exit(1)
+            else:
+                print(f"{filepath}: {error_msg}")
+                continue
 
         if path.is_dir():
             if args.debug:

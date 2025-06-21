@@ -772,6 +772,219 @@ class TestDebugFunctionality:
         assert "ERROR:" in result
 
 
+class TestExitOnErrorFunctionality:
+    """Test cases for exit-on-error functionality."""
+
+    def test_exit_on_error_flag_in_help(self, capsys):
+        """Test that exit-on-error option appears in help."""
+        import sys
+
+        # Mock sys.argv to simulate --help
+        with unittest.mock.patch.object(sys, "argv", ["fft.py", "--help"]):
+            with pytest.raises(SystemExit):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert "-E, --exit-on-error" in captured.out
+            assert "Exit immediately on filesystem errors" in captured.out
+
+    def test_normal_behavior_without_exit_on_error(self, capsys):
+        """Test normal behavior without -E flag (continue on errors)."""
+        import sys
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as f:
+            f.write("print('hello')")
+            f.flush()
+
+            # Mock sys.argv with nonexistent file and existing file
+            with unittest.mock.patch.object(
+                sys, "argv", ["fft.py", "/nonexistent/file.txt", f.name]
+            ):
+                fft.main()
+
+            captured = capsys.readouterr()
+
+            # Should show error for nonexistent file but continue processing
+            assert (
+                "ERROR: File or directory '/nonexistent/file.txt' does not exist"
+                in captured.out
+            )
+            assert "Python script" in captured.out  # Should process the existing file
+
+            os.unlink(f.name)
+
+    def test_exit_on_error_with_nonexistent_file(self, capsys):
+        """Test that -E flag exits on nonexistent file."""
+        import sys
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as f:
+            f.write("print('hello')")
+            f.flush()
+
+            # Mock sys.argv with -E flag and nonexistent file
+            with unittest.mock.patch.object(
+                sys, "argv", ["fft.py", "-E", "/nonexistent/file.txt", f.name]
+            ):
+                with pytest.raises(SystemExit) as exc_info:
+                    fft.main()
+
+                assert exc_info.value.code == 1
+
+            captured = capsys.readouterr()
+
+            # Error should go to stderr, not stdout
+            assert captured.out == ""
+            assert (
+                "ERROR: File or directory '/nonexistent/file.txt' does not exist"
+                in captured.err
+            )
+
+            os.unlink(f.name)
+
+    def test_exit_on_error_with_existing_file(self, capsys):
+        """Test that -E flag doesn't exit on existing files."""
+        import sys
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as f:
+            f.write("print('hello')")
+            f.flush()
+
+            # Mock sys.argv with -E flag and existing file
+            with unittest.mock.patch.object(sys, "argv", ["fft.py", "-E", f.name]):
+                fft.main()  # Should not raise SystemExit
+
+            captured = capsys.readouterr()
+
+            # Should process normally
+            assert "Python script" in captured.out
+            assert captured.err == ""
+
+            os.unlink(f.name)
+
+    def test_exit_on_error_with_nonexistent_directory(self, capsys):
+        """Test that -E flag exits on nonexistent directory."""
+        import sys
+
+        # Mock sys.argv with -E flag and nonexistent directory
+        with unittest.mock.patch.object(
+            sys, "argv", ["fft.py", "-E", "/nonexistent/directory/"]
+        ):
+            with pytest.raises(SystemExit) as exc_info:
+                fft.main()
+
+            assert exc_info.value.code == 1
+
+        captured = capsys.readouterr()
+
+        # Error should go to stderr
+        assert captured.out == ""
+        assert (
+            "ERROR: File or directory '/nonexistent/directory/' does not exist"
+            in captured.err
+        )
+
+    def test_exit_on_error_with_directory_access_error(self, capsys):
+        """Test that -E flag works with directories that cannot be accessed."""
+        import os
+        import sys
+        import tempfile
+
+        # Note: Directory permission errors don't always trigger os.walk() exceptions
+        # This test verifies the behavior when directories are inaccessible
+        with tempfile.TemporaryDirectory() as tmpdir:
+            restricted_dir = os.path.join(tmpdir, "restricted")
+            os.makedirs(restricted_dir)
+
+            # Create a file inside the directory
+            test_file = os.path.join(restricted_dir, "test.txt")
+            with open(test_file, "w") as f:
+                f.write("test content")
+
+            # Remove read and execute permissions on the directory
+            os.chmod(restricted_dir, 0o000)
+
+            try:
+                # Mock sys.argv with -E flag and restricted directory
+                with unittest.mock.patch.object(
+                    sys, "argv", ["fft.py", "-E", restricted_dir]
+                ):
+                    fft.main()  # This should not exit since directory exists
+
+                captured = capsys.readouterr()
+
+                # Directory is accessible but returns no files (treated as empty)
+                assert "directory (empty or inaccessible)" in captured.out
+
+            finally:
+                # Restore permissions for cleanup
+                os.chmod(restricted_dir, 0o755)
+
+    def test_exit_on_error_combined_with_other_flags(self, capsys):
+        """Test that -E flag works with other flags like debug and verbose."""
+        import sys
+
+        # Test with debug flag
+        with unittest.mock.patch.object(
+            sys, "argv", ["fft.py", "-E", "-d", "/nonexistent/file.txt"]
+        ):
+            with pytest.raises(SystemExit) as exc_info:
+                fft.main()
+
+            assert exc_info.value.code == 1
+
+        captured = capsys.readouterr()
+
+        # Should have both debug output and error
+        assert "DEBUG:" in captured.err
+        assert (
+            "ERROR: File or directory '/nonexistent/file.txt' does not exist"
+            in captured.err
+        )
+
+    def test_exit_on_error_stops_processing_multiple_files(self, capsys):
+        """Test that -E flag stops processing after first error."""
+        import sys
+        import tempfile
+
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".py") as f1:
+            f1.write("print('hello')")
+            f1.flush()
+
+            with tempfile.NamedTemporaryFile(
+                mode="w", delete=False, suffix=".js"
+            ) as f2:
+                f2.write("console.log('hello');")
+                f2.flush()
+
+                # Mock sys.argv with existing file, nonexistent file, then another existing file
+                with unittest.mock.patch.object(
+                    sys,
+                    "argv",
+                    ["fft.py", "-E", f1.name, "/nonexistent/file.txt", f2.name],
+                ):
+                    with pytest.raises(SystemExit) as exc_info:
+                        fft.main()
+
+                    assert exc_info.value.code == 1
+
+                captured = capsys.readouterr()
+
+                # Should process first file, then exit on error, not process third file
+                assert f1.name in captured.out and "Python script" in captured.out
+                assert f2.name not in captured.out  # Should not reach this file
+                assert (
+                    "ERROR: File or directory '/nonexistent/file.txt' does not exist"
+                    in captured.err
+                )
+
+                os.unlink(f2.name)
+
+            os.unlink(f1.name)
+
+
 @pytest.mark.integration
 class TestIntegration:
     """Integration tests for the FFT tool."""
