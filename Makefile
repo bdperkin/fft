@@ -82,7 +82,7 @@ build:
 	@ls -la dist/
 
 install:
-	$(PIP) install -e .
+	$(PYTHON) -m pip install -e .
 
 # RPM packaging
 srpm: clean-all
@@ -102,9 +102,12 @@ srpm: clean-all
 
 rpm: srpm
 	@echo "Building binary RPM..."
-	rpmbuild --rebuild python3-fft-$(shell grep '^__version__' $(PYTHON_SOURCE) | cut -d'"' -f2)-1.*.src.rpm \
+	@VERSION=$(shell grep '^__version__' $(PYTHON_SOURCE) | cut -d'"' -f2); \
+	rpmbuild --rebuild python3-fft-$$VERSION-1.*.src.rpm \
 		--define "_rpmdir $(PWD)" \
-		--define "_builddir $(PWD)/build"
+		--define "_builddir $(PWD)/build"; \
+	echo "Binary RPM build complete. Files created:"; \
+	ls -la python3-fft-$$VERSION-1.*.src.rpm noarch/python3-fft-$$VERSION-1.*.noarch.rpm 2>/dev/null || true
 
 rpm-install: rpm
 	@echo "Installing RPM package..."
