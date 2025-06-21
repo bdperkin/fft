@@ -111,7 +111,8 @@ clean:
 	rm -f $(INFO_FILE)
 	rm -f $(HTML_DOC)
 	rm -f $(PDF_DOC)
-	rm -f *.aux *.cp *.fn *.ky *.log *.pg *.toc *.tp *.vr
+	rm -f *.aux *.cp *.cps *.fn *.ky *.log *.pg *.toc *.tp *.vr
+	rm -f *.html *.pdf
 	rm -rf htmlcov/
 	rm -rf .pytest_cache/
 	rm -rf __pycache__/
