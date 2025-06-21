@@ -164,12 +164,12 @@ class FileTypeTester:
             
         return None
         
-    def detect_file_type(self, filepath):
+    def detect_file_type(self, filepath, verbose=False):
         """
         Main detection method that runs tests in order
         """
         if not os.path.exists(filepath):
-            return f"ERROR: File '{filepath}' does not exist"
+            return f"ERROR: File '{filepath}' does not exist", None
             
         # Run tests in order
         tests = [
@@ -182,12 +182,18 @@ class FileTypeTester:
             try:
                 result = test_func(filepath)
                 if result:
-                    return result
+                    if verbose:
+                        return result, test_name
+                    else:
+                        return result, None
             except Exception as e:
                 # Continue to next test if current one fails
                 continue
                 
-        return "unknown file type"
+        if verbose:
+            return "unknown file type", "None"
+        else:
+            return "unknown file type", None
 
 
 def main():
@@ -195,7 +201,7 @@ def main():
         description='FFT - File Type Tester: Determine file types using filesystem, magic, and language tests'
     )
     parser.add_argument('files', nargs='+', help='Files to analyze')
-    parser.add_argument('-v', '--verbose', action='store_true', help='Verbose output')
+    parser.add_argument('-v', '--verbose', action='store_true', help='Show which test category detected the file type')
     
     args = parser.parse_args()
     
@@ -204,12 +210,12 @@ def main():
     
     # Process each file
     for filepath in args.files:
-        file_type = tester.detect_file_type(filepath)
+        file_type, test_category = tester.detect_file_type(filepath, verbose=args.verbose)
         
-        if args.verbose:
-            print(f"{filepath}: {file_type}")
+        if args.verbose and test_category:
+            print(f"{filepath}: {file_type} [{test_category} test]")
         else:
-            print(file_type)
+            print(f"{filepath}: {file_type}")
 
 
 if __name__ == '__main__':

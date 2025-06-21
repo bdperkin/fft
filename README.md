@@ -47,7 +47,7 @@ pip install python-magic>=0.4.24
 ./fft.py file1.txt file2.py file3.jpg
 ```
 
-### With verbose output
+### With verbose output (shows which test detected the file type)
 
 ```bash
 ./fft.py -v file1.txt file2.py file3.jpg
@@ -86,14 +86,14 @@ fft file1.txt file2.py file3.jpg
 ## Examples
 
 ```bash
-$ ./fft.py fft.py setup.py README.md
-Python script
-Python script
-Markdown document
-
-$ ./fft.py -v fft.py setup.py README.md
-fft.py: Python script
-setup.py: Python script
+$ ./fft.py fft.py pyproject.toml README.md
+fft.py: executable script
+pyproject.toml: JSON data
 README.md: Markdown document
+
+$ ./fft.py -v fft.py pyproject.toml README.md
+fft.py: executable script [Filesystem test]
+pyproject.toml: JSON data [Language test]
+README.md: Markdown document [Filesystem test]
 ```
 Find files based on filesystem, magic, and language.
