@@ -51,8 +51,11 @@ test-info:
 
 # Development targets
 install-dev:
-	$(PIP) install -e ".[dev]"
+	$(PYTHON) -m pip install -e ".[dev]"
 	pre-commit install
+	@echo "Note: cspell is a Node.js package and must be installed separately:"
+	@echo "  npm install -g cspell"
+	@echo "  or use your system package manager"
 
 test:
 	pytest

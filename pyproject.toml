@@ -13,13 +13,11 @@ maintainers = [
 ]
 description = "File Type Tester - Determine file types using filesystem, magic, and language tests"
 readme = "README.md"
-license = {text = "MIT"}
-license-files = ["LICENSE"]
+license = "MIT"
 requires-python = ">=3.6"
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.6",
@@ -42,7 +40,6 @@ dev = [
     "flake8>=6.0.0",
     "isort>=5.12.0",
     "mypy>=1.5.0",
-    "cspell>=8.0.0",
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
 ]
