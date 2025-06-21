@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+# Copyright (c) 2025 Brandon Perkins
+# SPDX-License-Identifier: MIT
+#
+# This file is part of FFT (File Type Tester).
+# See LICENSE file for full license details.
+
 """
 FFT - File Type Tester
 Determines the file type of files using filesystem, magic, and language tests.

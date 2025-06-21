@@ -128,6 +128,14 @@ mypy fft.py
 - Write docstrings for all public functions and classes
 - Keep functions focused and reasonably sized
 - Use descriptive variable and function names
+- Include license headers in all new source files:
+  ```python
+  # Copyright (c) 2025 Brandon Perkins
+  # SPDX-License-Identifier: MIT
+  #
+  # This file is part of FFT (File Type Tester).
+  # See LICENSE file for full license details.
+  ```
 
 ### Adding New File Types
 
