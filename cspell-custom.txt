@@ -77,3 +77,21 @@ etc
 var
 proc
 sys
+
+# Man page specific terms
+manpage
+nroff
+groff
+troff
+
+# Texinfo/Info specific terms
+texinfo
+texi
+makeinfo
+ifnottex
+printindex
+dircategory
+direntry
+insertcopying
+filll
+vskip

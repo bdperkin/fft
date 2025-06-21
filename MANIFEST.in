@@ -1,0 +1,8 @@
+include fft.1
+include fft.texi
+include Makefile
+include README.md
+include LICENSE
+include CHANGELOG.md
+include CONTRIBUTING.md
+recursive-include tests *.py

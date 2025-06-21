@@ -1,0 +1,169 @@
+.TH FFT 1 "2024-12-19" "fft 1.3.0" "User Commands"
+.SH NAME
+fft \- File Type Tester: determine file types using filesystem, magic, and language tests
+.SH SYNOPSIS
+.B fft
+[\fIOPTION\fR]... \fIFILE\fR...
+.SH DESCRIPTION
+.B fft
+(File Type Tester) is a Python tool that determines the file type of files using three different test categories performed in sequence:
+.PP
+1. \fBFilesystem Tests\fR \- Check file extensions, permissions, and filesystem attributes
+.PP
+2. \fBMagic Tests\fR \- Use libmagic to detect file types based on file signatures
+.PP
+3. \fBLanguage Tests\fR \- Analyze file content to detect programming languages and text formats
+.PP
+The first test that successfully identifies the file type will be reported.
+.SH OPTIONS
+.TP
+.BR \-v ", " \-\-verbose
+Show which test category detected the file type. The output format becomes:
+.I filename: type [test_category test]
+.TP
+.BR \-b ", " \-\-brief
+Do not prepend filenames to output lines (brief mode). Only the file type is displayed without the filename prefix.
+.TP
+.BR \-\-version
+Show version information and exit.
+.TP
+.BR \-h ", " \-\-help
+Display help message and exit.
+.SH TEST CATEGORIES
+.SS Filesystem Tests
+Examines file system properties and attributes:
+.IP \(bu 2
+Directory detection
+.IP \(bu 2
+Symbolic links
+.IP \(bu 2
+Device files (block/character)
+.IP \(bu 2
+FIFO pipes and sockets
+.IP \(bu 2
+Executable files (with shebang detection)
+.IP \(bu 2
+File extensions (comprehensive mapping of common extensions)
+.SS Magic Tests
+Uses the libmagic library for file signature analysis:
+.IP \(bu 2
+MIME type detection using libmagic
+.IP \(bu 2
+File signature analysis
+.IP \(bu 2
+Fallback to Python's mimetypes module
+.SS Language Tests
+Content-based programming language detection:
+.IP \(bu 2
+Pattern matching for various programming languages
+.IP \(bu 2
+Supported languages: Python, JavaScript, C/C++, Java, Shell scripts, PHP, Ruby, HTML, XML, JSON, CSS, Markdown
+.IP \(bu 2
+Text file detection based on printable character ratio
+.SH EXAMPLES
+.TP
+Basic usage:
+.B fft
+script.py document.pdf image.jpg
+.PP
+Output:
+.nf
+script.py: Python script
+document.pdf: PDF document
+image.jpg: JPEG image
+.fi
+.TP
+Verbose mode showing test categories:
+.B fft \-v
+script.py document.pdf README.md
+.PP
+Output:
+.nf
+script.py: Python script [Filesystem test]
+document.pdf: PDF document [Magic test]
+README.md: Markdown document [Language test]
+.fi
+.TP
+Brief mode without filenames:
+.B fft \-b
+script.py document.pdf README.md
+.PP
+Output:
+.nf
+Python script
+PDF document
+Markdown document
+.fi
+.TP
+Test various file types:
+.B fft
+/dev/null . /bin/bash /nonexistent/file
+.PP
+Output:
+.nf
+/dev/null: character device
+.: directory
+/bin/bash: executable script
+/nonexistent/file: ERROR: File '/nonexistent/file' does not exist
+.fi
+.SH SUPPORTED FILE TYPES
+.SS Extensions (Filesystem Tests)
+Text files: .txt, .md, .csv
+.br
+Programming: .py, .js, .html, .css, .json, .xml, .c, .cpp, .h, .java, .class, .rb, .php, .sh, .bat, .ps1
+.br
+Images: .jpg, .jpeg, .png, .gif
+.br
+Archives: .zip, .tar, .gz
+.br
+Documents: .pdf
+.br
+Libraries: .so, .a, .dll
+.br
+Executables: .exe, .o
+.SS Language Detection Patterns
+Detects programming languages through content analysis including shebang lines, import statements, syntax patterns, and document structure markers.
+.SH FILES
+.TP
+.I ~/.local/lib/python*/site-packages/fft.py
+Main program file (when installed via pip)
+.SH DEPENDENCIES
+.TP
+.I python-magic
+Required for magic number detection. Install with:
+.B pip install python-magic
+.TP
+.I libmagic
+System library for file type detection. Install with:
+.B apt-get install libmagic1
+(Debian/Ubuntu) or
+.B dnf install file-libs
+(RHEL/Fedora)
+.SH DIAGNOSTICS
+The program exits with status 0 on success. Error messages are printed to standard output for individual files that cannot be processed, but the program continues processing remaining files.
+.SH NOTES
+.IP \(bu 2
+Tests are performed in order: filesystem, magic, then language tests
+.IP \(bu 2
+The first successful test determines the reported file type
+.IP \(bu 2
+Non-existent files return an error message but don't stop processing
+.IP \(bu 2
+Binary files may be detected as "unknown file type" if no test succeeds
+.SH BUGS
+Report bugs to: https://github.com/bdperkin/fft/issues
+.SH SEE ALSO
+.BR file (1),
+.BR magic (5),
+.BR mimetypes (1)
+.SH AUTHOR
+Brandon Perkins <bdperkin@gmail.com>
+.SH COPYRIGHT
+Copyright (c) 2024 Brandon Perkins. License MIT: https://opensource.org/licenses/MIT
+.br
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+.SH VERSION
+This manual page documents
+.B fft
+version 1.3.0.

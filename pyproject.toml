@@ -59,6 +59,10 @@ fft = "fft:main"
 
 [tool.setuptools]
 py-modules = ["fft"]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"*" = ["*.1", "*.texi", "*.info"]
 
 [tool.setuptools.dynamic]
 version = {attr = "fft.__version__"}

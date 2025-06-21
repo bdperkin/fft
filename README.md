@@ -61,6 +61,12 @@ Run tests:
 pytest
 ```
 
+Build documentation:
+```bash
+make docs  # Build info and HTML documentation
+make help  # Show all available Makefile targets
+```
+
 ## Usage
 
 ### Direct Script Execution
@@ -80,6 +86,21 @@ pytest
 ```bash
 fft file1.txt file2.py file3.jpg
 ```
+
+### View documentation
+
+```bash
+# Manual page
+man fft
+
+# Info documentation (hierarchical, cross-referenced)
+info fft
+
+# HTML documentation (if generated)
+# See fft.html or run: make html
+```
+
+(Note: Documentation is included in the package and available after installation)
 
 ## Test Categories
 

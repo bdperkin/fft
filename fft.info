@@ -1,0 +1,740 @@
+This is fft.info, produced by makeinfo version 7.2 from fft.texi.
+
+This manual is for FFT (File Type Tester), version 1.3.0.
+
+   Copyright © 2024 Brandon Perkins.
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the MIT License.
+INFO-DIR-SECTION File utilities
+START-INFO-DIR-ENTRY
+* FFT: (fft).                   File Type Tester - determine file types
+END-INFO-DIR-ENTRY
+
+
+File: fft.info,  Node: Top,  Next: Introduction,  Up: (dir)
+
+FFT - File Type Tester
+**********************
+
+This manual documents FFT (File Type Tester), version 1.3.0.
+
+   This manual is for FFT (File Type Tester), version 1.3.0.
+
+   Copyright © 2024 Brandon Perkins.
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the MIT License.
+
+* Menu:
+
+* Introduction::                What is FFT?
+* Installation::                How to install FFT
+* Usage::                       How to use FFT
+* Test Categories::             Understanding the detection methods
+* Examples::                    Usage examples
+* Options::                     Command line options
+* File Types::                  Supported file types
+* Dependencies::                Required packages
+* Troubleshooting::             Common issues and solutions
+* Contributing::                How to contribute to FFT
+* Copying::                     License information
+* Index::                       Concept index
+
+
+File: fft.info,  Node: Introduction,  Next: Installation,  Prev: Top,  Up: Top
+
+1 Introduction
+**************
+
+FFT (File Type Tester) is a Python tool that determines the file type of
+files using three different test categories performed in sequence:
+
+  1. *Filesystem Tests* - Check file extensions, permissions, and
+     filesystem attributes
+  2. *Magic Tests* - Use libmagic to detect file types based on file
+     signatures
+  3. *Language Tests* - Analyze file content to detect programming
+     languages and text formats
+
+   The first test that successfully identifies the file type will be
+reported.
+
+1.1 Key Features
+================
+
+   • Three-tier detection system for comprehensive file type
+     identification
+   • Support for over 30 common file extensions
+   • Magic number detection using libmagic
+   • Programming language detection through content analysis
+   • Special file type detection (directories, symlinks, devices)
+   • Verbose mode showing which test detected the file type
+   • Brief mode for script-friendly output
+   • Cross-platform compatibility (Linux, macOS, Windows)
+
+
+File: fft.info,  Node: Installation,  Next: Usage,  Prev: Introduction,  Up: Top
+
+2 Installation
+**************
+
+2.1 Requirements
+================
+
+   • Python 3.6 or higher
+   • libmagic library (for magic number detection)
+   • python-magic Python package
+
+2.2 System Dependencies
+=======================
+
+On Ubuntu/Debian:
+-----------------
+
+     sudo apt-get install libmagic1
+
+On RHEL/CentOS/Fedora:
+----------------------
+
+     sudo dnf install file-libs
+     # or on older systems:
+     sudo yum install file-libs
+
+On macOS:
+---------
+
+     brew install libmagic
+
+2.3 Python Package Installation
+===============================
+
+Install as a package (recommended):
+-----------------------------------
+
+     pip install -e .
+
+Or install dependencies manually:
+---------------------------------
+
+     pip install python-magic>=0.4.24
+
+2.4 Development Setup
+=====================
+
+For development with code quality tools:
+     pip install -e ".[dev]"
+     pre-commit install
+
+
+File: fft.info,  Node: Usage,  Next: Test Categories,  Prev: Installation,  Up: Top
+
+3 Usage
+*******
+
+3.1 Basic Usage
+===============
+
+     fft file1.txt file2.py file3.jpg
+
+3.2 Direct Script Execution
+===========================
+
+If not installed as a package:
+     ./fft.py file1.txt file2.py file3.jpg
+
+3.3 Output Formats
+==================
+
+FFT supports three output formats:
+
+*Default*
+     Shows filename and detected type: ‘filename: type’
+*Verbose (‘-v’)*
+     Shows filename, type, and detection method: ‘filename: type
+     [test_category test]’
+*Brief (‘-b’)*
+     Shows only the detected type: ‘type’
+
+
+File: fft.info,  Node: Test Categories,  Next: Examples,  Prev: Usage,  Up: Top
+
+4 Test Categories
+*****************
+
+FFT uses a three-tier detection system, with tests performed in sequence
+until a match is found.
+
+4.1 Filesystem Tests
+====================
+
+The first and fastest test category examines file system properties:
+
+*Directory detection*
+     Identifies directories and folder structures
+*Symbolic links*
+     Detects symbolic links and their targets
+*Device files*
+     Recognizes block and character devices (‘/dev/null’, ‘/dev/zero’)
+*FIFO pipes and sockets*
+     Identifies named pipes and Unix sockets
+*Executable files*
+     Detects executable permissions and shebang lines
+*File extensions*
+     Maps common extensions to file types (30+ extensions supported)
+
+4.2 Magic Tests
+===============
+
+The second test category uses libmagic for file signature analysis:
+
+*MIME type detection*
+     Uses libmagic to determine MIME types
+*File signature analysis*
+     Examines file headers and magic numbers
+*Binary format detection*
+     Identifies binary file formats and structures
+*Fallback detection*
+     Uses Python's mimetypes module as fallback
+
+4.3 Language Tests
+==================
+
+The third test category analyzes file content:
+
+*Shebang detection*
+     Recognizes interpreter declarations (‘#!/usr/bin/python’)
+*Import statements*
+     Detects language-specific import patterns
+*Syntax patterns*
+     Matches language-specific syntax structures
+*Document markers*
+     Identifies markup and documentation formats
+*Text analysis*
+     Determines text files based on printable character ratio
+
+4.3.1 Supported Languages
+-------------------------
+
+   • Python (‘import’, ‘from’, shebang)
+   • JavaScript (‘const’, ‘let’, ‘var’)
+   • C/C++ (‘#include’, ‘int main’)
+   • Java (‘package’, ‘public class’)
+   • Shell scripts (‘#!/bin/bash’, ‘#!/bin/sh’)
+   • PHP (‘<?php’, variables)
+   • Ruby (‘class’, ‘def’, ‘module’)
+   • HTML (‘<!DOCTYPE’, ‘<html>’)
+   • XML (‘<?xml>’, markup)
+   • JSON (object notation)
+   • CSS (selectors and rules)
+   • Markdown (headers, lists)
+
+
+File: fft.info,  Node: Examples,  Next: Options,  Prev: Test Categories,  Up: Top
+
+5 Examples
+**********
+
+5.1 Basic File Detection
+========================
+
+     $ fft script.py document.pdf image.jpg
+     script.py: Python script
+     document.pdf: PDF document
+     image.jpg: JPEG image
+
+5.2 Verbose Mode
+================
+
+Show which test category detected each file:
+
+     $ fft -v script.py document.pdf README.md
+     script.py: Python script [Filesystem test]
+     document.pdf: PDF document [Magic test]
+     README.md: Markdown document [Language test]
+
+5.3 Brief Mode
+==============
+
+Output only file types without filenames:
+
+     $ fft -b script.py document.pdf README.md
+     Python script
+     PDF document
+     Markdown document
+
+5.4 Special Files
+=================
+
+     $ fft /dev/null . /bin/bash /nonexistent/file
+     /dev/null: character device
+     .: directory
+     /bin/bash: executable script
+     /nonexistent/file: ERROR: File '/nonexistent/file' does not exist
+
+5.5 Multiple File Processing
+============================
+
+FFT can process multiple files in a single command:
+
+     $ fft *.py *.md *.json
+     main.py: Python script
+     helper.py: Python script
+     README.md: Markdown document
+     config.json: JSON data
+
+
+File: fft.info,  Node: Options,  Next: File Types,  Prev: Examples,  Up: Top
+
+6 Command Line Options
+**********************
+
+‘-v, --verbose’
+     Show which test category detected the file type.  The output format
+     becomes: ‘filename: type [test_category test]’
+
+‘-b, --brief’
+     Do not prepend filenames to output lines (brief mode).  Only the
+     file type is displayed without the filename prefix.  Useful for
+     scripting.
+
+‘--version’
+     Show version information and exit.
+
+‘-h, --help’
+     Display help message showing all available options and exit.
+
+6.1 Option Combinations
+=======================
+
+*Default behavior*
+     ‘fft file.txt’ → ‘file.txt: text file’
+
+*Verbose mode*
+     ‘fft -v file.txt’ → ‘file.txt: text file [Filesystem test]’
+
+*Brief mode*
+     ‘fft -b file.txt’ → ‘text file’
+
+*Brief overrides verbose*
+     ‘fft -v -b file.txt’ → ‘text file’
+
+
+File: fft.info,  Node: File Types,  Next: Dependencies,  Prev: Options,  Up: Top
+
+7 Supported File Types
+**********************
+
+7.1 File Extensions
+===================
+
+FFT recognizes the following file extensions through filesystem tests:
+
+7.1.1 Text Files
+----------------
+
+‘.txt’
+     Plain text files
+‘.md’
+     Markdown documents
+‘.csv’
+     Comma-separated values
+
+7.1.2 Programming Languages
+---------------------------
+
+‘.py’
+     Python scripts
+‘.js’
+     JavaScript files
+‘.html’
+     HTML documents
+‘.css’
+     CSS stylesheets
+‘.json’
+     JSON data files
+‘.xml’
+     XML documents
+‘.c’
+     C source files
+‘.cpp’
+     C++ source files
+‘.h’
+     C/C++ header files
+‘.java’
+     Java source files
+‘.class’
+     Java bytecode
+‘.rb’
+     Ruby scripts
+‘.php’
+     PHP scripts
+‘.sh’
+     Shell scripts
+‘.bat’
+     Windows batch files
+‘.ps1’
+     PowerShell scripts
+
+7.1.3 Media Files
+-----------------
+
+‘.jpg, .jpeg’
+     JPEG images
+‘.png’
+     PNG images
+‘.gif’
+     GIF images
+
+7.1.4 Archives and Documents
+----------------------------
+
+‘.zip’
+     ZIP archives
+‘.tar’
+     TAR archives
+‘.gz’
+     GZIP compressed files
+‘.pdf’
+     PDF documents
+
+7.1.5 Binary Files
+------------------
+
+‘.exe’
+     Windows executables
+‘.dll’
+     Windows DLLs
+‘.so’
+     Shared libraries
+‘.a’
+     Static libraries
+‘.o’
+     Object files
+
+7.2 Special File Types
+======================
+
+Beyond extensions, FFT can detect:
+
+   • Directories
+   • Symbolic links
+   • Block devices
+   • Character devices
+   • FIFO pipes (named pipes)
+   • Unix sockets
+   • Executable files (with shebang detection)
+
+
+File: fft.info,  Node: Dependencies,  Next: Troubleshooting,  Prev: File Types,  Up: Top
+
+8 Dependencies
+**************
+
+8.1 Runtime Dependencies
+========================
+
+*python-magic*
+     Python bindings for libmagic.  Required for magic number detection.
+     Install with: ‘pip install python-magic>=0.4.24’
+
+*libmagic*
+     System library for file type detection.  Usually pre-installed on
+     Unix systems.
+
+8.2 Development Dependencies
+============================
+
+When installing with ‘pip install -e ".[dev]"’:
+
+   • pre-commit - Git hooks for code quality
+   • black - Code formatting
+   • flake8 - Linting and style checking
+   • isort - Import sorting
+   • mypy - Type checking
+   • cspell - Spell checking
+   • pytest - Testing framework
+   • pytest-cov - Coverage reporting
+
+8.3 System Library Installation
+===============================
+
+8.3.1 Linux
+-----------
+
+*Ubuntu/Debian*
+     ‘sudo apt-get install libmagic1’
+*RHEL/CentOS/Fedora*
+     ‘sudo dnf install file-libs’
+*Arch Linux*
+     ‘sudo pacman -S file’
+
+8.3.2 macOS
+-----------
+
+     brew install libmagic
+
+8.3.3 Windows
+-------------
+
+The python-magic package includes Windows binaries, but for best
+results:
+     # Using conda
+     conda install libmagic
+
+     # Or download from: https://github.com/julian-r/python-magic
+
+
+File: fft.info,  Node: Troubleshooting,  Next: Contributing,  Prev: Dependencies,  Up: Top
+
+9 Troubleshooting
+*****************
+
+9.1 Common Issues
+=================
+
+9.1.1 "magic" module not found
+------------------------------
+
+*Problem:* ‘ImportError: No module named 'magic'’
+
+   *Solution:*
+     pip install python-magic
+
+9.1.2 libmagic library not found
+--------------------------------
+
+*Problem:* ‘ImportError: failed to find libmagic’
+
+   *Solution:* Install system libmagic library:
+     # Ubuntu/Debian
+     sudo apt-get install libmagic1
+
+     # RHEL/Fedora
+     sudo dnf install file-libs
+
+     # macOS
+     brew install libmagic
+
+9.1.3 Incorrect file type detection
+-----------------------------------
+
+*Problem:* Files are detected incorrectly
+
+   *Solution:* Use verbose mode to see which test is being used:
+     fft -v problematic_file
+
+   Consider that:
+   • Filesystem tests only check extensions
+   • Magic tests depend on file signatures
+   • Language tests analyze content patterns
+
+9.1.4 Permission denied errors
+------------------------------
+
+*Problem:* Cannot read certain files
+
+   *Solution:* FFT continues processing other files when individual
+files fail.  Check file permissions:
+     ls -la problematic_file
+
+9.2 Debug Mode
+==============
+
+For development and debugging, you can modify the source to add debug
+output:
+
+     # In fft.py, add temporary debug prints:
+     print(f"DEBUG: Testing {filepath} with {test_name}")
+
+9.3 Getting Help
+================
+
+   • Check the manual: ‘man fft’
+   • View help: ‘fft --help’
+   • Report bugs: <https://github.com/bdperkin/fft/issues>
+   • Read contributing guide: ‘CONTRIBUTING.md’
+
+
+File: fft.info,  Node: Contributing,  Next: Copying,  Prev: Troubleshooting,  Up: Top
+
+10 Contributing to FFT
+**********************
+
+10.1 How to Contribute
+======================
+
+Contributions to FFT are welcome!  Here are ways you can help:
+
+   • Report bugs and issues
+   • Suggest new features
+   • Improve documentation
+   • Add support for new file types
+   • Fix bugs and implement features
+   • Improve test coverage
+
+10.2 Development Setup
+======================
+
+  1. Fork the repository on GitHub
+  2. Clone your fork locally
+  3. Set up development environment:
+          pip install -e ".[dev]"
+          pre-commit install
+  4. Create a feature branch
+  5. Make your changes
+  6. Run tests: ‘pytest’
+  7. Commit and push changes
+  8. Create a pull request
+
+10.3 Code Standards
+===================
+
+The project maintains high code quality:
+
+   • Black code formatting (88-character lines)
+   • Flake8 linting
+   • isort import sorting
+   • MyPy type checking
+   • cSpell spell checking
+   • Comprehensive test coverage
+
+10.4 Adding New File Types
+==========================
+
+To add support for new file types:
+
+  1. Add extensions to ‘extension_map’ in ‘filesystem_tests()’
+  2. Add patterns to ‘patterns’ list in ‘language_tests()’
+  3. Write tests for the new file type
+  4. Update documentation
+
+10.5 Reporting Bugs
+===================
+
+When reporting bugs, include:
+
+   • FFT version (‘fft --version’)
+   • Python version
+   • Operating system
+   • File that's incorrectly detected
+   • Expected vs.  actual behavior
+   • Steps to reproduce
+
+
+File: fft.info,  Node: Copying,  Next: Index,  Prev: Contributing,  Up: Top
+
+11 License Information
+**********************
+
+This manual is for FFT (File Type Tester), version 1.3.0.
+
+   Copyright © 2024 Brandon Perkins.
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the MIT License.
+
+   FFT is distributed under the MIT License.  This is a permissive
+license that allows you to:
+
+   • Use the software for any purpose
+   • Modify the software
+   • Distribute the software
+   • Include in proprietary software
+
+11.1 Full License Text
+======================
+
+     MIT License
+
+     Copyright (c) 2024 Brandon Perkins
+
+     Permission is hereby granted, free of charge, to any person obtaining a copy
+     of this software and associated documentation files (the "Software"), to deal
+     in the Software without restriction, including without limitation the rights
+     to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+     copies of the Software, and to permit persons to whom the Software is
+     furnished to do so, subject to the following conditions:
+
+     The above copyright notice and this permission notice shall be included in all
+     copies or substantial portions of the Software.
+
+     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+     IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+     FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+     AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+     LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+     OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+     SOFTWARE.
+
+
+File: fft.info,  Node: Index,  Prev: Copying,  Up: Top
+
+Index
+*****
+
+ [index ]
+* Menu:
+
+* bug reports:                           Contributing.         (line  5)
+* command line:                          Usage.                (line  6)
+* command line options:                  Options.              (line  6)
+* common issues:                         Troubleshooting.      (line  6)
+* content analysis:                      Test Categories.      (line 44)
+* contributing:                          Contributing.         (line  6)
+* copyright:                             Copying.              (line  6)
+* debugging:                             Troubleshooting.      (line  5)
+* dependencies:                          Installation.         (line  5)
+* dependencies <1>:                      Dependencies.         (line  6)
+* detection methods:                     Test Categories.      (line  6)
+* development:                           Contributing.         (line  6)
+* examples:                              Usage.                (line  5)
+* examples <1>:                          Examples.             (line  6)
+* file identification:                   Introduction.         (line  6)
+* file type detection:                   Introduction.         (line  6)
+* file types:                            File Types.           (line  6)
+* filesystem tests:                      Test Categories.      (line  6)
+* filesystem tests <1>:                  Test Categories.      (line 12)
+* index:                                 Index.                (line  6)
+* installation:                          Installation.         (line  6)
+* introduction:                          Introduction.         (line  6)
+* language tests:                        Test Categories.      (line  6)
+* language tests <1>:                    Test Categories.      (line 44)
+* libmagic:                              Test Categories.      (line 30)
+* license:                               Copying.              (line  6)
+* magic tests:                           Test Categories.      (line  6)
+* magic tests <1>:                       Test Categories.      (line 30)
+* MIME types:                            Test Categories.      (line 30)
+* MIT license:                           Copying.              (line  6)
+* options:                               Options.              (line  6)
+* programming languages:                 Test Categories.      (line 44)
+* requirements:                          Installation.         (line  6)
+* requirements <1>:                      Dependencies.         (line  5)
+* supported formats:                     File Types.           (line  5)
+* test categories:                       Test Categories.      (line  6)
+* troubleshooting:                       Troubleshooting.      (line  6)
+* usage:                                 Usage.                (line  6)
+* usage examples:                        Examples.             (line  5)
+
+
+Tag Table:
+Node: Top426
+Node: Introduction1455
+Node: Installation2579
+Node: Usage3567
+Node: Test Categories4203
+Node: Examples6405
+Node: Options7658
+Node: File Types8602
+Node: Dependencies10332
+Node: Troubleshooting11674
+Node: Contributing13371
+Node: Copying14993
+Node: Index16773
+
+End Tag Table
+
+
+Local Variables:
+coding: utf-8
+End:
