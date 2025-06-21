@@ -1,0 +1,79 @@
+# Custom dictionary for FFT project
+# Add project-specific terms, acronyms, and technical words here
+
+# Project-specific terms
+FFT
+fft
+bdperkin
+Perkins
+
+# File type detection terms
+FIFO
+WASM
+ELF
+bytecode
+libmagic
+mimetypes
+filesystem
+shebang
+shebangs
+symlink
+symlinks
+executables
+
+# Python/Development terms
+pyproject
+setuptools
+argparse
+pathlib
+docstring
+docstrings
+isort
+mypy
+flake
+pytest
+
+# Version control and tooling
+gitignore
+changelog
+contrib
+codespaces
+linter
+linting
+prepend
+
+# File formats and extensions
+toml
+yaml
+unicode
+
+# Technical acronyms
+SPDX
+MIT
+API
+CLI
+EOF
+EOL
+JSON
+XML
+HTML
+CSS
+CSV
+PDF
+ZIP
+TAR
+GZIP
+JPEG
+PNG
+GIF
+DLL
+
+# System terms
+dev
+tmp
+usr
+bin
+etc
+var
+proc
+sys

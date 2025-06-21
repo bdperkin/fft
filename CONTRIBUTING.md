@@ -106,6 +106,7 @@ This project maintains high code quality standards using automated tools:
 - **Flake8**: Linting and style checking
 - **isort**: Import sorting
 - **MyPy**: Type checking
+- **cSpell**: Spell checking for code and documentation
 - **Pre-commit hooks**: Various checks (trailing whitespace, YAML/TOML validation, etc.)
 
 ### Running Code Quality Checks
@@ -119,6 +120,7 @@ black fft.py
 flake8 fft.py
 isort fft.py
 mypy fft.py
+cspell "**/*.py" "**/*.md"
 ```
 
 ### Code Style Guidelines
@@ -136,6 +138,8 @@ mypy fft.py
   # This file is part of FFT (File Type Tester).
   # See LICENSE file for full license details.
   ```
+- Ensure proper spelling in code comments and documentation
+- Add technical terms to `cspell-custom.txt` if needed for spell checking
 
 ### Adding New File Types
 

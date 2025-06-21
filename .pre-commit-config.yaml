@@ -36,3 +36,9 @@ repos:
     hooks:
       - id: mypy
         args: [--ignore-missing-imports, --no-strict-optional]
+
+  - repo: https://github.com/streetsidesoftware/cspell-cli
+    rev: v8.0.0
+    hooks:
+      - id: cspell
+        args: [--config=cspell.json]

@@ -1,0 +1,103 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "ignorePaths": [
+    ".git/**",
+    ".mypy_cache/**",
+    "**/__pycache__/**",
+    "*.pyc",
+    ".pre-commit-config.yaml",
+    ".gitignore"
+  ],
+  "files": [
+    "**/*.py",
+    "**/*.md",
+    "**/*.txt",
+    "**/*.toml",
+    "**/*.yaml",
+    "**/*.yml"
+  ],
+  "dictionaries": [
+    "python",
+    "software-terms",
+    "node",
+    "bash",
+    "html",
+    "css",
+    "typescript",
+    "cpp",
+    "java",
+    "custom-fft"
+  ],
+  "dictionaryDefinitions": [
+    {
+      "name": "custom-fft",
+      "path": "./cspell-custom.txt",
+      "addWords": true
+    }
+  ],
+  "words": [
+    "argparse",
+    "bdperkin",
+    "changelog",
+    "codespaces",
+    "contrib",
+    "dataclasses",
+    "docstring",
+    "docstrings",
+    "executables",
+    "fdperkin",
+    "fft",
+    "filesystem",
+    "flake",
+    "gitignore",
+    "isort",
+    "libmagic",
+    "linter",
+    "linting",
+    "mimetypes",
+    "mypy",
+    "pathlib",
+    "perkins",
+    "prepend",
+    "pyproject",
+    "pytest",
+    "setuptools",
+    "shebang",
+    "shebangs",
+    "symlink",
+    "symlinks",
+    "toml",
+    "unicode",
+    "yaml"
+  ],
+  "ignoreWords": [
+    "SPDX"
+  ],
+  "patterns": [
+    {
+      "name": "emails",
+      "pattern": "\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b"
+    },
+    {
+      "name": "urls",
+      "pattern": "https?://[^\\s]+"
+    },
+    {
+      "name": "hex-colors",
+      "pattern": "#[0-9a-fA-F]{3,8}"
+    },
+    {
+      "name": "python-imports",
+      "pattern": "(?:from\\s+)?(?:[a-zA-Z_][a-zA-Z0-9_]*\\.)*[a-zA-Z_][a-zA-Z0-9_]*(?:\\s+import\\s+[a-zA-Z_][a-zA-Z0-9_,\\s]*)?$"
+    }
+  ],
+  "ignoreRegExpList": [
+    "emails",
+    "urls",
+    "hex-colors"
+  ],
+  "allowCompoundWords": true,
+  "caseSensitive": false,
+  "flagWords": []
+}
