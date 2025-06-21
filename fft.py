@@ -221,7 +221,7 @@ def main():
             "magic, and language tests"
         )
     )
-    parser.add_argument("files", nargs="+", help="Files to analyze")
+    parser.add_argument("files", nargs="+", help="Files or directories to analyze")
     parser.add_argument(
         "-v",
         "--verbose",
@@ -235,6 +235,12 @@ def main():
         help="Do not prepend filenames to output lines (brief mode)",
     )
     parser.add_argument(
+        "-r",
+        "--recursive",
+        action="store_true",
+        help="Recursively process directories (default when directory is given)",
+    )
+    parser.add_argument(
         "--version",
         action="version",
         version=f"%(prog)s {__version__}",
@@ -246,8 +252,8 @@ def main():
     # Initialize the tester
     tester = FileTypeTester()
 
-    # Process each file
-    for filepath in args.files:
+    def process_file(filepath):
+        """Process a single file and output the result"""
         file_type, test_category = tester.detect_file_type(
             filepath, verbose=args.verbose
         )
@@ -261,6 +267,33 @@ def main():
         else:
             # Default mode: filename and file type
             print(f"{filepath}: {file_type}")
+
+    def get_files_from_directory(directory_path):
+        """Recursively get all files from a directory"""
+        files = []
+        try:
+            for root, dirs, filenames in os.walk(directory_path):
+                for filename in filenames:
+                    files.append(os.path.join(root, filename))
+        except (OSError, PermissionError) as e:
+            print(f"ERROR: Cannot access directory '{directory_path}': {e}")
+        return files
+
+    # Process each file or directory
+    for filepath in args.files:
+        path = Path(filepath)
+
+        if path.is_dir():
+            # Process directory recursively
+            files_in_dir = get_files_from_directory(filepath)
+            if files_in_dir:
+                for file_in_dir in sorted(files_in_dir):
+                    process_file(file_in_dir)
+            else:
+                print(f"{filepath}: directory (empty or inaccessible)")
+        else:
+            # Process single file
+            process_file(filepath)
 
 
 if __name__ == "__main__":

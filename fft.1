@@ -3,10 +3,10 @@
 fft \- File Type Tester: determine file types using filesystem, magic, and language tests
 .SH SYNOPSIS
 .B fft
-[\fIOPTION\fR]... \fIFILE\fR...
+[\fIOPTION\fR]... \fIFILE\fR|\fIDIRECTORY\fR...
 .SH DESCRIPTION
 .B fft
-(File Type Tester) is a Python tool that determines the file type of files using three different test categories performed in sequence:
+(File Type Tester) is a Python tool that determines the file type of files using three different test categories performed in sequence. When a directory is provided, all files within that directory are recursively processed:
 .PP
 1. \fBFilesystem Tests\fR \- Check file extensions, permissions, and filesystem attributes
 .PP
@@ -23,6 +23,9 @@ Show which test category detected the file type. The output format becomes:
 .TP
 .BR \-b ", " \-\-brief
 Do not prepend filenames to output lines (brief mode). Only the file type is displayed without the filename prefix.
+.TP
+.BR \-r ", " \-\-recursive
+Recursively process directories (default when directory is given). This option is automatically enabled when a directory argument is provided.
 .TP
 .BR \-\-version
 Show version information and exit.
@@ -95,14 +98,26 @@ PDF document
 Markdown document
 .fi
 .TP
-Test various file types:
+Process a directory recursively:
+.B fft
+/home/user/project/
+.PP
+Output:
+.nf
+/home/user/project/README.md: Markdown document
+/home/user/project/main.py: Python script
+/home/user/project/src/utils.js: JavaScript file
+/home/user/project/tests/test_main.py: Python script
+.fi
+.TP
+Test various file types including directories:
 .B fft
 /dev/null . /bin/bash /nonexistent/file
 .PP
 Output:
 .nf
 /dev/null: character device
-.: directory
+.: directory (empty or inaccessible)
 /bin/bash: executable script
 /nonexistent/file: ERROR: File '/nonexistent/file' does not exist
 .fi
@@ -150,6 +165,12 @@ The first successful test determines the reported file type
 Non-existent files return an error message but don't stop processing
 .IP \(bu 2
 Binary files may be detected as "unknown file type" if no test succeeds
+.IP \(bu 2
+Directory arguments are automatically processed recursively, finding all files within
+.IP \(bu 2
+Files within directories are processed in sorted order by full path
+.IP \(bu 2
+Empty or inaccessible directories display a special message
 .SH BUGS
 Report bugs to: https://github.com/bdperkin/fft/issues
 .SH SEE ALSO

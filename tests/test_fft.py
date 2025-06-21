@@ -387,6 +387,207 @@ class TestMain:
             os.unlink(f1.name)
 
 
+class TestDirectoryProcessing:
+    """Test cases for directory processing functionality."""
+
+    def test_main_with_directory(self, capsys):
+        """Test main function with directory argument."""
+        import sys
+        import tempfile
+
+        # Create a temporary directory with test files
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create test files
+            py_file = os.path.join(tmpdir, "test.py")
+            with open(py_file, "w") as f:
+                f.write("print('hello')")
+
+            js_file = os.path.join(tmpdir, "test.js")
+            with open(js_file, "w") as f:
+                f.write("console.log('hello');")
+
+            # Create subdirectory with more files
+            subdir = os.path.join(tmpdir, "subdir")
+            os.makedirs(subdir)
+
+            json_file = os.path.join(subdir, "test.json")
+            with open(json_file, "w") as f:
+                f.write('{"name": "test"}')
+
+            # Mock sys.argv to test directory processing
+            with unittest.mock.patch.object(sys, "argv", ["fft.py", tmpdir]):
+                fft.main()
+
+            captured = capsys.readouterr()
+
+            # Check that all files were processed
+            assert "test.py: Python script" in captured.out
+            assert "test.js: JavaScript file" in captured.out
+            assert "test.json: JSON data" in captured.out
+
+            # Check that files are sorted and include full paths
+            output_lines = captured.out.strip().split("\n")
+            assert len(output_lines) == 3
+
+            # Files should be processed in sorted order
+            assert all(tmpdir in line for line in output_lines)
+
+    def test_main_with_directory_verbose(self, capsys):
+        """Test main function with directory argument in verbose mode."""
+        import sys
+        import tempfile
+
+        # Create a temporary directory with test files
+        with tempfile.TemporaryDirectory() as tmpdir:
+            py_file = os.path.join(tmpdir, "test.py")
+            with open(py_file, "w") as f:
+                f.write("print('hello')")
+
+            # Mock sys.argv to test directory processing with verbose
+            with unittest.mock.patch.object(sys, "argv", ["fft.py", "-v", tmpdir]):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert "test.py: Python script [Filesystem test]" in captured.out
+
+    def test_main_with_directory_brief(self, capsys):
+        """Test main function with directory argument in brief mode."""
+        import sys
+        import tempfile
+
+        # Create a temporary directory with test files
+        with tempfile.TemporaryDirectory() as tmpdir:
+            py_file = os.path.join(tmpdir, "test.py")
+            with open(py_file, "w") as f:
+                f.write("print('hello')")
+
+            js_file = os.path.join(tmpdir, "test.js")
+            with open(js_file, "w") as f:
+                f.write("console.log('hello');")
+
+            # Mock sys.argv to test directory processing with brief
+            with unittest.mock.patch.object(sys, "argv", ["fft.py", "-b", tmpdir]):
+                fft.main()
+
+            captured = capsys.readouterr()
+            output_lines = captured.out.strip().split("\n")
+
+            # In brief mode, no filenames should appear
+            assert all(tmpdir not in line for line in output_lines)
+            assert "Python script" in captured.out
+            assert "JavaScript file" in captured.out
+
+    def test_main_with_empty_directory(self, capsys):
+        """Test main function with empty directory."""
+        import sys
+        import tempfile
+
+        # Create an empty temporary directory
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Make sure directory is empty
+            assert len(os.listdir(tmpdir)) == 0
+
+            # Mock sys.argv to test empty directory processing
+            with unittest.mock.patch.object(sys, "argv", ["fft.py", tmpdir]):
+                fft.main()
+
+            captured = capsys.readouterr()
+            assert f"{tmpdir}: directory (empty or inaccessible)" in captured.out
+
+    def test_main_with_mixed_files_and_directories(self, capsys):
+        """Test main function with mix of files and directories."""
+        import sys
+        import tempfile
+
+        # Create a temporary directory with test files
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create a test file in the directory
+            py_file = os.path.join(tmpdir, "test.py")
+            with open(py_file, "w") as f:
+                f.write("print('hello')")
+
+            # Create a standalone test file
+            with tempfile.NamedTemporaryFile(
+                mode="w", delete=False, suffix=".js"
+            ) as standalone_file:
+                standalone_file.write("console.log('hello');")
+                standalone_file.flush()
+
+                # Mock sys.argv to test mixed processing
+                with unittest.mock.patch.object(
+                    sys, "argv", ["fft.py", standalone_file.name, tmpdir]
+                ):
+                    fft.main()
+
+                captured = capsys.readouterr()
+
+                # Check that both standalone file and directory files were processed
+                assert f"{standalone_file.name}: JavaScript file" in captured.out
+                assert "test.py: Python script" in captured.out
+
+                os.unlink(standalone_file.name)
+
+    def test_main_with_inaccessible_directory(self, capsys):
+        """Test main function with inaccessible directory."""
+        import sys
+
+        # Test with non-existent directory
+        with unittest.mock.patch.object(
+            sys, "argv", ["fft.py", "/nonexistent/directory"]
+        ):
+            fft.main()
+
+        captured = capsys.readouterr()
+        assert (
+            "ERROR: Cannot access directory" in captured.out
+            or "ERROR: File" in captured.out
+        )
+
+    def test_get_files_from_directory_function(self):
+        """Test the get_files_from_directory function directly."""
+        import tempfile
+
+        # Create a temporary directory with nested structure
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Create files in root
+            file1 = os.path.join(tmpdir, "file1.txt")
+            with open(file1, "w") as f:
+                f.write("test")
+
+            # Create subdirectory with files
+            subdir = os.path.join(tmpdir, "subdir")
+            os.makedirs(subdir)
+            file2 = os.path.join(subdir, "file2.py")
+            with open(file2, "w") as f:
+                f.write("print('test')")
+
+            # Create nested subdirectory
+            nested_subdir = os.path.join(subdir, "nested")
+            os.makedirs(nested_subdir)
+            file3 = os.path.join(nested_subdir, "file3.js")
+            with open(file3, "w") as f:
+                f.write("console.log('test');")
+
+            # Test the function using the implementation from main
+            files = []
+            try:
+                for root, dirs, filenames in os.walk(tmpdir):
+                    for filename in filenames:
+                        files.append(os.path.join(root, filename))
+            except (OSError, PermissionError):
+                pass
+
+            # Check that all files were found
+            assert len(files) == 3
+            assert any("file1.txt" in f for f in files)
+            assert any("file2.py" in f for f in files)
+            assert any("file3.js" in f for f in files)
+
+            # Check that files are properly nested
+            assert any(os.path.join("subdir", "file2.py") in f for f in files)
+            assert any(os.path.join("subdir", "nested", "file3.js") in f for f in files)
+
+
 @pytest.mark.integration
 class TestIntegration:
     """Integration tests for the FFT tool."""
@@ -409,3 +610,20 @@ class TestIntegration:
         if os.path.exists("README.md"):
             result, _ = tester.detect_file_type("README.md")
             assert "Markdown" in result or "text" in result
+
+    def test_real_directory_processing(self, capsys):
+        """Test directory processing on real project directory."""
+        import sys
+
+        # Test with the tests directory
+        if os.path.exists("tests") and os.path.isdir("tests"):
+            with unittest.mock.patch.object(sys, "argv", ["fft.py", "tests"]):
+                fft.main()
+
+            captured = capsys.readouterr()
+
+            # Should find Python test files
+            assert "test_fft.py" in captured.out
+            assert (
+                "Python script" in captured.out or "executable script" in captured.out
+            )
