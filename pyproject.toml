@@ -13,7 +13,7 @@ maintainers = [
 ]
 description = "File Type Tester - Determine file types using filesystem, magic, and language tests"
 readme = "README.md"
-license = "MIT"
+license = {text = "MIT"}
 requires-python = ">=3.6"
 classifiers = [
     "Development Status :: 4 - Beta",
